@@ -32,13 +32,7 @@ Follow the steps below to use AutoOptLib:
 
 Refer to the Documentation [Web](https://AutoOpt.readthedocs.io/) / [PDF](https://github.com/qz89/AutoOpt/blob/main/AutoOptLib%20for%20Matlab/Documentation.pdf) for user guide.
 
-## Release Notes
-* Version 1.0 (18 Oct 2023)
-
-## License
-Users can use, redistribute, and modify AutoOptLib under the terms of the GNU General Public version 3 or any later version.
-
-AutoOptLib is developed and maintained by the Swarm Intelligence laboratory at the Department of Computer Science and Engineering, Southern University of Science and Technology. Users should reference the following papers if using AutoOptLib in their publications:
+AutoOptLib is developed and maintained by Qi Zhao at the Department of Computer Science and Engineering, Southern University of Science and Technology. Users should reference the following papers if using AutoOptLib in their publications:
 ```
 @article{zhao2023autooptlib,
   title={AutoOptLib: Tailoring Metaheuristic Optimizers via Automated Algorithm Design},
