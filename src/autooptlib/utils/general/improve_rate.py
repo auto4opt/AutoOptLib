@@ -24,7 +24,9 @@ def _fitness_from_solution(solution: Any) -> float:
     return base if feasible else (con_sum + 1e8)
 
 
-def improve_rate(solution: Any, improve: Sequence[float] | None, inner_g: int, typ: str):
+def improve_rate(
+    solution: Any, improve: Sequence[float] | None, inner_g: int, typ: str
+):
     """Compute improvement vector as in MATLAB version.
 
     Returns the updated ``improve`` vector of length k+1 (default k=3), where
@@ -52,7 +54,9 @@ def improve_rate(solution: Any, improve: Sequence[float] | None, inner_g: int, t
                 items = list(solution)
             except TypeError:
                 items = [solution]
-            fitness = np.asarray([_fitness_from_solution(it) for it in items], dtype=float)
+            fitness = np.asarray(
+                [_fitness_from_solution(it) for it in items], dtype=float
+            )
         best = float(np.min(fitness)) if fitness.size else float("inf")
     elif typ == "algorithm":
         # expect object exposing avePerformAll or similar

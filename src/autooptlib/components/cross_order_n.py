@@ -1,4 +1,5 @@
 """N-order crossover for permutations."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -34,7 +35,11 @@ def cross_order_n(*args):
         aux = args[3] if len(args) > 3 else None
         rng = ensure_rng(aux)
 
-        n_points = int(round(float(np.asarray(para).reshape(-1)[0]))) if para is not None else 1
+        n_points = (
+            int(round(float(np.asarray(para).reshape(-1)[0])))
+            if para is not None
+            else 1
+        )
         parent = _extract_matrix(parent_obj)
         n, d = parent.shape
         half = (n + 1) // 2
@@ -49,10 +54,8 @@ def cross_order_n(*args):
             temp = _stable_setdiff(parent2[i], parent1[i, k])
             off1[i, complement] = temp
 
-            k2 = rng.choice(d, size=min(max(1, n_points), d), replace=False)
-            k2.sort()
-            complement2 = [idx for idx in range(d) if idx not in k2]
-            temp2 = _stable_setdiff(parent1[i], parent2[i, k2])
+            complement2 = [idx for idx in range(d) if idx not in k]
+            temp2 = _stable_setdiff(parent1[i], parent2[i, k])
             off2[i, complement2] = temp2
         offspring = np.vstack([off1, off2])
         return offspring[:n], aux

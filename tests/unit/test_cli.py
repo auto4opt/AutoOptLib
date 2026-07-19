@@ -56,4 +56,3 @@ def test_autoopt_solve_smoke(tmp_workdir):
     assert len(best_solutions) == 1
     assert Path("Solutions.pkl").exists()
     assert Path("Fitness_all_runs.csv").exists()
-

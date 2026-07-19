@@ -22,7 +22,9 @@ def initialize(setting: Any, n: int):
     alg_q = int(get_flex(setting, "alg_q", required=True))
 
     operators = [[None for _ in range(alg_p)] for _ in range(alg_count)]
-    paras: list[list[list[Any]]] = [[None for _ in range(len(para_space))] for _ in range(alg_count)]
+    paras: list[list[list[Any]]] = [
+        [None for _ in range(len(para_space))] for _ in range(alg_count)
+    ]
 
     for i in range(alg_count):
         ind_choose = int(rng.integers(op_space[0, 0], op_space[0, 1] + 1))
@@ -40,7 +42,11 @@ def initialize(setting: Any, n: int):
             matrix[-1, :] = (ind_start, ind_update)
             operators[i][j] = matrix
 
-        ind_non_empty_para = [idx + 1 for idx, space in enumerate(para_space) if space is not None and len(space) > 0]
+        ind_non_empty_para = [
+            idx + 1
+            for idx, space in enumerate(para_space)
+            if space is not None and len(space) > 0
+        ]
         temp_para = [[None, None] for _ in range(len(para_space))]
         for idx in ind_non_empty_para:
             bounds = np.asarray(para_space[idx - 1], dtype=float)

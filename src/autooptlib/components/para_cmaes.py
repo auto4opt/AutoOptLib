@@ -9,4 +9,3 @@ from .para_cma import para_cma
 
 def para_cmaes(*args: Any):
     return para_cma(*args)
-

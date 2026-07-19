@@ -1,4 +1,5 @@
 """Scramble elements within a segment."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -33,9 +34,9 @@ def search_scramble(*args):
         for i in range(n):
             idx = np.sort(rng.choice(d, size=2, replace=False))
             start, end = int(idx[0]), int(idx[1])
-            segment = new[i, start:end + 1]
+            segment = new[i, start : end + 1]
             rng.shuffle(segment)
-            new[i, start:end + 1] = segment
+            new[i, start : end + 1] = segment
         return new, aux
 
     if mode == "parameter":

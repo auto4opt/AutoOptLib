@@ -4,12 +4,70 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autooptlib"
-version = "0.1.0"
-description = "AutoOptLib Python port (algorithm design framework)"
+dynamic = ["version"]
+description = "Component-based automated design of metaheuristic optimizers"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "GPL-3.0-or-later"}
-authors = [{ name = "Swarm Intelligence Lab" }]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+  { name = "Qi Zhao", email = "zhaoq@sustech.edu.cn" },
+  { name = "Swarm Intelligence Lab" },
+]
+keywords = [
+  "automated algorithm design",
+  "metaheuristics",
+  "optimization",
+  "evolutionary computation",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = [
+  "numpy>=1.23,<3",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=7.4",
+  "pytest-cov>=4.1",
+]
+dev = [
+  "build>=1.2",
+  "pytest>=7.4",
+  "pytest-cov>=4.1",
+  "sphinx>=7.2,<9",
+  "sphinx-rtd-theme>=2,<4",
+  "myst-parser>=2,<5",
+  "mypy>=1.10,<2",
+  "ruff>=0.9,<1",
+]
+docs = [
+  "sphinx>=7.2,<9",
+  "sphinx-rtd-theme>=2,<4",
+  "myst-parser>=2,<5",
+]
+applications = [
+  "scipy>=1.10,<2",
+]
+surrogate = [
+  "scikit-learn>=1.2,<2",
+]
+
+[project.urls]
+Homepage = "https://github.com/auto4opt/AutoOptLib"
+Documentation = "https://autooptlib.readthedocs.io/"
+Repository = "https://github.com/auto4opt/AutoOptLib"
+Issues = "https://github.com/auto4opt/AutoOptLib/issues"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -17,3 +75,35 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["autooptlib*"]
+
+[tool.setuptools.package-data]
+"autooptlib.problems.data" = ["*.npz", "README.md"]
+
+[tool.setuptools.dynamic]
+version = { attr = "autooptlib._version.__version__" }
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.9"
+files = [
+  "src/autooptlib/serialization.py",
+  "src/autooptlib/problems/base.py",
+  "src/autooptlib/applications",
+  "src/autooptlib/utils/general/input.py",
+  "src/autooptlib/utils/general/process.py",
+  "src/autooptlib/utils/solve/__init__.py",
+]
+follow_imports = "skip"
+ignore_missing_imports = true
+check_untyped_defs = true
+show_error_codes = true
+
+[tool.ruff]
+target-version = "py39"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

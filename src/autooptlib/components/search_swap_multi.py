@@ -1,4 +1,5 @@
 """Multi swap between segments."""
+
 from __future__ import annotations
 
 from typing import Any

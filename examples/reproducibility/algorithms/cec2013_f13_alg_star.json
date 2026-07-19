@@ -1,0 +1,28 @@
+{
+  "schema": "autooptlib.algorithm",
+  "schema_version": 1,
+  "autooptlib_version": "1.2.0",
+  "metadata": {
+    "name": "Alg*_f13",
+    "problem": "cec2013_f13",
+    "source": "AutoOptLib software paper pseudocode"
+  },
+  "pathways": [
+    {
+      "choose": "choose_roulette_wheel",
+      "choose_parameter": null,
+      "search": [
+        {
+          "primary": "search_cma",
+          "secondary": null,
+          "termination": [{"$float": "-inf"}, 1.0],
+          "primary_parameter": null,
+          "secondary_parameter": null
+        }
+      ],
+      "update": "update_always",
+      "update_parameter": null,
+      "archive": []
+    }
+  ]
+}

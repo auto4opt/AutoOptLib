@@ -1,0 +1,28 @@
+{
+  "schema": "autooptlib.algorithm",
+  "schema_version": 1,
+  "autooptlib_version": "1.2.0",
+  "metadata": {
+    "name": "Alg*_f6",
+    "problem": "cec2013_f6",
+    "source": "AutoOptLib software paper pseudocode"
+  },
+  "pathways": [
+    {
+      "choose": "choose_roulette_wheel",
+      "choose_parameter": null,
+      "search": [
+        {
+          "primary": "cross_arithmetic",
+          "secondary": "search_mu_cauchy",
+          "termination": [{"$float": "-inf"}, 1.0],
+          "primary_parameter": [0.20423],
+          "secondary_parameter": null
+        }
+      ],
+      "update": "update_greedy",
+      "update_parameter": null,
+      "archive": []
+    }
+  ]
+}

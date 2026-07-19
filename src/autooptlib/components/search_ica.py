@@ -6,7 +6,7 @@ from typing import Any, Dict
 
 import numpy as np
 
-from ._utils import flex_get
+from ._utils import ensure_rng, flex_get
 
 
 def _ensure_aux(aux: Any) -> Dict[str, Any]:
@@ -37,10 +37,15 @@ def search_ica(*args: Any):
         problem = args[1] if len(args) > 1 else None
         para = args[2] if len(args) > 2 else None
         aux = _ensure_aux(args[3] if len(args) > 3 else None)
+        rng = ensure_rng(aux, problem)
 
         if not isinstance(raw_parent, (np.ndarray, list, tuple)):
             decs_attr = getattr(raw_parent, "decs", None)
-            parent = decs_attr() if callable(decs_attr) else (decs_attr if decs_attr is not None else raw_parent)
+            parent = (
+                decs_attr()
+                if callable(decs_attr)
+                else (decs_attr if decs_attr is not None else raw_parent)
+            )
         else:
             parent = raw_parent
         parent = np.asarray(parent, dtype=float)
@@ -79,16 +84,16 @@ def search_ica(*args: Any):
         offspring = parent.copy()
         if colonies.size:
             colony_indices = order[imperialist_count:]
-            assign = np.random.randint(0, imperialist_count, size=colonies.shape[0])
-            rand_scale = np.random.rand(colonies.shape[0], d)
+            assign = rng.integers(0, imperialist_count, size=colonies.shape[0])
+            rand_scale = rng.random((colonies.shape[0], d))
             target = imperialists[assign]
             moved = colonies + assimilation_coeff * rand_scale * (target - colonies)
             moved = np.clip(moved, lower, upper)
             offspring[colony_indices] = moved
 
-        revol_mask = np.random.rand(n, d) < revolution_prob
+        revol_mask = rng.random((n, d)) < revolution_prob
         if np.any(revol_mask):
-            random_values = lower + range_span * np.random.rand(n, d)
+            random_values = lower + range_span * rng.random((n, d))
             offspring[revol_mask] = random_values[revol_mask]
 
         return offspring, aux
@@ -100,4 +105,3 @@ def search_ica(*args: Any):
         return ["", "GS"], None
 
     raise ValueError(f"Unsupported mode: {mode}")
-

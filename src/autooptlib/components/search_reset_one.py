@@ -1,4 +1,5 @@
 """Reset a single element of each solution."""
+
 from __future__ import annotations
 
 from typing import Any

@@ -6,6 +6,7 @@ from typing import Any, Iterable, Sequence
 
 import numpy as np
 
+from ._approximate import Approximate
 from ._decode import decode as _decode
 from ._disturb import disturb as _disturb
 from ._estimate import estimate as _estimate
@@ -13,7 +14,6 @@ from ._evaluate import evaluate as _evaluate
 from ._helpers import get_flex, problem_list
 from ._initialize import initialize as _initialize
 from ._repair import repair as _repair
-from ._approximate import Approximate
 
 __all__ = ["Design", "Approximate"]
 
@@ -78,7 +78,9 @@ class Design:
         new_design.last_runs = {idx: [None] * alg_runs for idx in range(len(problems))}
 
         # disturb returns lists; for a single algorithm pick the first entry
-        aux_result = aux_out[0] if isinstance(aux_out, Sequence) and aux_out else aux_out
+        aux_result = (
+            aux_out[0] if isinstance(aux_out, Sequence) and aux_out else aux_out
+        )
         return new_design, aux_result
 
     def get_performance(self, setting: Any, seed_instance: Iterable[int]) -> np.ndarray:
@@ -86,9 +88,11 @@ class Design:
         seeds = list(seed_instance)
         alg_runs = _get_alg_runs(setting)
         if (
-            get_flex(setting, "Evaluate", get_flex(setting, "evaluate", "exact")) == "approximate"
+            get_flex(setting, "Evaluate", get_flex(setting, "evaluate", "exact"))
+            == "approximate"
             and self.performance_approx.size
-            and not self.performance.size
+            and np.any(self.performance_approx != 0)
+            and not np.any(self.performance != 0)
         ):
             data = self.performance_approx[seeds, :]
         else:
@@ -104,27 +108,27 @@ class Design:
         """Average actual performance across instances and runs."""
         if self.performance.size == 0:
             return np.array([])
-        return np.mean(self.performance, axis=1)
+        return np.array([float(np.mean(self.performance))])
 
     def ave_perform_approx_all(self) -> np.ndarray:
         """Average approximate performance across instances and runs."""
         if self.performance_approx.size == 0:
             return np.array([])
-        return np.mean(self.performance_approx, axis=1)
+        return np.array([float(np.mean(self.performance_approx))])
 
     def ave_perform_per(self, indices: Iterable[int]) -> np.ndarray:
         """Average actual performance over selected instances."""
         if self.performance.size == 0:
             return np.array([])
         idx = np.atleast_1d(list(indices))
-        return np.mean(self.performance[idx, :], axis=1)
+        return np.array([float(np.mean(self.performance[idx, :]))])
 
     def ave_perform_approx_per(self, indices: Iterable[int]) -> np.ndarray:
         """Average approximate performance over selected instances."""
         if self.performance_approx.size == 0:
             return np.array([])
         idx = np.atleast_1d(list(indices))
-        return np.mean(self.performance_approx[idx, :], axis=1)
+        return np.array([float(np.mean(self.performance_approx[idx, :]))])
 
     # Bind external implementations as instance methods ---------------------
     disturb = _disturb

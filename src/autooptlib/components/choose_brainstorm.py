@@ -26,7 +26,9 @@ def _extract_objs(solution: Any) -> np.ndarray:
     return arr.reshape(-1)
 
 
-def _kmeans_labels(data: np.ndarray, k: int, rng: np.random.Generator, max_iter: int = 50) -> np.ndarray:
+def _kmeans_labels(
+    data: np.ndarray, k: int, rng: np.random.Generator, max_iter: int = 50
+) -> np.ndarray:
     n_samples = data.shape[0]
     if n_samples == 0 or k <= 0:
         return np.empty(0, dtype=int)
@@ -67,11 +69,17 @@ def choose_brainstorm(*args: Any):
         ptype = flex_get(problem, "type", ["continuous"])
         ptype0 = ptype[0] if isinstance(ptype, (list, tuple)) else ptype
         if "continuous" not in str(ptype0).lower():
-            raise ValueError("choose_brainstorm is only available for continuous problems")
+            raise ValueError(
+                "choose_brainstorm is only available for continuous problems"
+            )
 
-        para_arr = np.asarray(para, dtype=float) if para is not None else np.array([2.0, 0.5])
+        para_arr = (
+            np.asarray(para, dtype=float) if para is not None else np.array([2.0, 0.5])
+        )
         if para_arr.size < 2:
-            para_arr = np.pad(para_arr, (0, 2 - para_arr.size), mode="constant", constant_values=0.5)
+            para_arr = np.pad(
+                para_arr, (0, 2 - para_arr.size), mode="constant", constant_values=0.5
+            )
         k = max(2, int(round(float(para_arr[0]))))
         gamma = float(para_arr[1])
         k = min(k, pop_size)
@@ -104,7 +112,9 @@ def choose_brainstorm(*args: Any):
             probabilities /= total
 
         n_select = int(flex_get(problem, "N", pop_size))
-        chosen_centers = rng.choice(centers, size=n_select, replace=True, p=probabilities)
+        chosen_centers = rng.choice(
+            centers, size=n_select, replace=True, p=probabilities
+        )
 
         result = []
         for center_idx in chosen_centers:
@@ -126,4 +136,3 @@ def choose_brainstorm(*args: Any):
         return ["", ""], None
 
     raise ValueError(f"Unsupported mode: {mode}")
-

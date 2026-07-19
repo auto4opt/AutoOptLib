@@ -1,4 +1,5 @@
 """Random reset operator for discrete variables."""
+
 from __future__ import annotations
 
 from typing import Any

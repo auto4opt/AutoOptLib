@@ -1,4 +1,5 @@
 """Two-order crossover for permutations."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -21,11 +22,13 @@ def _extract_matrix(parent: Any) -> np.ndarray:
     return arr
 
 
-def _order_crossover(p1: np.ndarray, p2: np.ndarray, start: int, end: int) -> np.ndarray:
-    segment = p1[start:end + 1]
+def _order_crossover(
+    p1: np.ndarray, p2: np.ndarray, start: int, end: int
+) -> np.ndarray:
+    segment = p1[start : end + 1]
     remainder = [x for x in p2 if x not in segment]
     mask = np.ones(p1.shape[0], dtype=bool)
-    mask[start:end + 1] = False
+    mask[start : end + 1] = False
     offspring = p1.copy()
     offspring[mask] = remainder
     return offspring

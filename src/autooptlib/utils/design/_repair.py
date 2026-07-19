@@ -17,13 +17,19 @@ from ._helpers import (
 )
 
 
-def repair(operators: list[list[np.ndarray]], paras: list[list[list[Any]]], problem: Any, setting: Any):
+def repair(
+    operators: list[list[np.ndarray]],
+    paras: list[list[list[Any]]],
+    problem: Any,
+    setting: Any,
+):
     """Ensure the designed algorithm(s) remain reasonable."""
     rng = ensure_rng(setting)
     all_op = list(get_flex(setting, "all_op", required=True))
-    para_local_space = list(get_flex(setting, "para_local_space", default=[None] * len(all_op)))
+    para_local_space = list(
+        get_flex(setting, "para_local_space", default=[None] * len(all_op))
+    )
     behav_space = list(get_flex(setting, "behav_space", default=[None] * len(all_op)))
-    alg_p = int(get_flex(setting, "alg_p", required=True))
 
     while len(para_local_space) < len(all_op):
         para_local_space.append(None)
@@ -44,14 +50,22 @@ def repair(operators: list[list[np.ndarray]], paras: list[list[list[Any]]], prob
 
     for algo_idx, algo_ops in enumerate(operators):
         curr_ops = [np.array(path, dtype=int, copy=True) for path in algo_ops]
-        curr_paras = [list(entry) if entry is not None else [None, None] for entry in paras[algo_idx]]
+        curr_paras = [
+            list(entry) if entry is not None else [None, None]
+            for entry in paras[algo_idx]
+        ]
 
         for path_idx, matrix in enumerate(curr_ops):
             if matrix.size == 0:
                 continue
 
             for row in range(1, matrix.shape[0] - 1):
-                if ind_cross and matrix[row, 0] in ind_cross and matrix[row, 1] not in ind_mu and ind_mu:
+                if (
+                    ind_cross
+                    and matrix[row, 0] in ind_cross
+                    and matrix[row, 1] not in ind_mu
+                    and ind_mu
+                ):
                     ind_new = int(rng.choice(ind_mu))
                     matrix[row, 1] = ind_new
                     matrix[row + 1, 0] = ind_new
@@ -64,10 +78,27 @@ def repair(operators: list[list[np.ndarray]], paras: list[list[list[Any]]], prob
             mask = matrix[:, 0] != matrix[:, 1]
             matrix = matrix[mask]
 
-            ind_pso = next((idx + 1 for idx, name in enumerate(all_op) if name == "search_pso"), None)
+            ind_pso = next(
+                (idx + 1 for idx, name in enumerate(all_op) if name == "search_pso"),
+                None,
+            )
             if ind_pso is not None and np.any(matrix == ind_pso):
-                ind_choose = next((idx + 1 for idx, name in enumerate(all_op) if name == "choose_traverse"), None)
-                ind_update = next((idx + 1 for idx, name in enumerate(all_op) if name == "update_always"), None)
+                ind_choose = next(
+                    (
+                        idx + 1
+                        for idx, name in enumerate(all_op)
+                        if name == "choose_traverse"
+                    ),
+                    None,
+                )
+                ind_update = next(
+                    (
+                        idx + 1
+                        for idx, name in enumerate(all_op)
+                        if name == "update_always"
+                    ),
+                    None,
+                )
                 if ind_choose and ind_update:
                     first_matrix = np.array(curr_ops[0], dtype=int, copy=True)
                     if first_matrix.size == 0:
@@ -75,13 +106,20 @@ def repair(operators: list[list[np.ndarray]], paras: list[list[list[Any]]], prob
                     first_matrix[0, 0] = ind_choose
                     first_matrix[-1, 1] = ind_update
                     curr_ops[0] = first_matrix
-                    matrix = np.array([[ind_choose, ind_pso], [ind_pso, ind_update]], dtype=int)
+                    matrix = np.array(
+                        [[ind_choose, ind_pso], [ind_pso, ind_update]], dtype=int
+                    )
 
             ind_search = matrix[1:, 0].tolist()
             for idx in ind_search:
                 set_behavior(curr_paras[idx - 1], "LS")
 
-            ind_search = [idx for idx in ind_search if behav_space[idx - 1] is not None and has_global_behavior(behav_space[idx - 1])]
+            ind_search = [
+                idx
+                for idx in ind_search
+                if behav_space[idx - 1] is not None
+                and has_global_behavior(behav_space[idx - 1])
+            ]
 
             ind_gs: list[int] = []
             for idx in ind_search:
@@ -107,7 +145,9 @@ def repair(operators: list[list[np.ndarray]], paras: list[list[list[Any]]], prob
                 retain = int(rng.choice(ind_gs))
                 rows_retain = np.where(matrix[:, 0] == retain)[0]
                 if rows_retain.size > 1:
-                    rows_to_delete = rng.choice(rows_retain, size=rows_retain.size - 1, replace=False)
+                    rows_to_delete = rng.choice(
+                        rows_retain, size=rows_retain.size - 1, replace=False
+                    )
                     rows_to_delete = np.sort(rows_to_delete)
                     for row in rows_to_delete[::-1]:
                         if row > 0:
@@ -130,7 +170,9 @@ def repair(operators: list[list[np.ndarray]], paras: list[list[list[Any]]], prob
                 for idx in list(ind_gs):
                     bounds = para_local_space[idx - 1]
                     if bounds is not None and len(bounds) > 0:
-                        curr_paras[idx - 1][0] = reinit_parameters(np.asarray(bounds, dtype=float), rng)
+                        curr_paras[idx - 1][0] = reinit_parameters(
+                            np.asarray(bounds, dtype=float), rng
+                        )
                         set_behavior(curr_paras[idx - 1], "LS")
                     else:
                         rows_to_remove = np.where(matrix[:, 0] == idx)[0]

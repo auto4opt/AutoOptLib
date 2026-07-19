@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .base import ProblemDefinition as ProblemDefinition
+from .base import make_problem as make_problem
 from .cec2013 import (
     cec2013_f1,
     cec2013_f2,
@@ -63,4 +65,3 @@ __all__ = [
     "cec2013_f27",
     "cec2013_f28",
 ]
-

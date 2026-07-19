@@ -5,7 +5,7 @@ from typing import Any
 
 import numpy as np
 
-from ..components import get_component
+from ..components import compatible_custom_components, get_component
 from .design._helpers import get_problem_type
 
 
@@ -15,7 +15,11 @@ def _to_namespace(setting: Any) -> SimpleNamespace:
     if isinstance(setting, dict):
         return SimpleNamespace(**setting)
     # Fallback: copy attributes
-    data = {k: getattr(setting, k) for k in dir(setting) if not k.startswith("__") and not callable(getattr(setting, k))}
+    data = {
+        k: getattr(setting, k)
+        for k in dir(setting)
+        if not k.startswith("__") and not callable(getattr(setting, k))
+    }
     return SimpleNamespace(**data)
 
 
@@ -43,7 +47,9 @@ def _to_behavior_matrix(behavior: Any) -> list[list[Any]] | None:
     return matrix
 
 
-def _compute_local_bounds(behavior: list[list[Any]] | None, bounds: np.ndarray | None, ls_range: float) -> np.ndarray | None:
+def _compute_local_bounds(
+    behavior: list[list[Any]] | None, bounds: np.ndarray | None, ls_range: float
+) -> np.ndarray | None:
     """Compute the parameter subspace used for local search, mirroring MATLAB Space.m."""
     if behavior is None or bounds is None or bounds.size == 0:
         return None
@@ -54,7 +60,9 @@ def _compute_local_bounds(behavior: list[list[Any]] | None, bounds: np.ndarray |
     if first_col in (None, "", 0):
         return None
 
-    has_global = len(behavior) > 1 and behavior[1] and behavior[1][0] not in (None, "", 0)
+    has_global = (
+        len(behavior) > 1 and behavior[1] and behavior[1][0] not in (None, "", 0)
+    )
     if not has_global:
         return bounds.copy()
 
@@ -72,7 +80,9 @@ def _compute_local_bounds(behavior: list[list[Any]] | None, bounds: np.ndarray |
             local_bounds[idx, 0] = lower
             local_bounds[idx, 1] = lower + span[idx] * ls_range
         elif trend == "large":
-            local_bounds[idx, 0] = upper - span[idx] * ls_range
+            # Keep the reference search region used by the published MATLAB
+            # experiments (Space.m), including its upper-bound scaling rule.
+            local_bounds[idx, 0] = upper - upper * ls_range
             local_bounds[idx, 1] = upper
         else:
             local_bounds[idx, 0] = lower
@@ -89,26 +99,44 @@ def space(problem: Any, setting: Any) -> SimpleNamespace:
     ptype = get_problem_type(problem)
 
     if ptype == "continuous":
-        choose = ["choose_traverse", "choose_tournament", "choose_roulette_wheel", "choose_nich"]
+        choose = [
+            "choose_traverse",
+            "choose_tournament",
+            "choose_roulette_wheel",
+            "choose_nich",
+        ]
         search = [
             "search_de_current",
             "search_de_current_best",
             "search_de_random",
-            "search_cma",
-            "search_pso",
+            "cross_arithmetic",
+            "cross_sim_binary",
             "cross_point_one",
             "cross_point_two",
-            "cross_point_uniform",
             "cross_point_n",
+            "cross_point_uniform",
             "search_mu_gaussian",
             "search_mu_cauchy",
             "search_mu_polynomial",
             "search_mu_uniform",
+            "search_eda",
+            "search_cma",
             "reinit_continuous",
         ]
-        update = ["update_greedy", "update_round_robin", "update_pairwise", "update_always", "update_simulated_annealing"]
+        update = [
+            "update_greedy",
+            "update_round_robin",
+            "update_pairwise",
+            "update_always",
+            "update_simulated_annealing",
+        ]
     elif ptype == "discrete":
-        choose = ["choose_traverse", "choose_tournament", "choose_roulette_wheel", "choose_nich"]
+        choose = [
+            "choose_traverse",
+            "choose_tournament",
+            "choose_roulette_wheel",
+            "choose_nich",
+        ]
         search = [
             "cross_point_one",
             "cross_point_two",
@@ -116,12 +144,22 @@ def space(problem: Any, setting: Any) -> SimpleNamespace:
             "cross_point_n",
             "search_reset_one",
             "search_reset_rand",
-            "search_reset_creep",
             "reinit_discrete",
         ]
-        update = ["update_greedy", "update_round_robin", "update_pairwise", "update_always", "update_simulated_annealing"]
+        update = [
+            "update_greedy",
+            "update_round_robin",
+            "update_pairwise",
+            "update_always",
+            "update_simulated_annealing",
+        ]
     elif ptype == "permutation":
-        choose = ["choose_traverse", "choose_tournament", "choose_roulette_wheel", "choose_nich"]
+        choose = [
+            "choose_traverse",
+            "choose_tournament",
+            "choose_roulette_wheel",
+            "choose_nich",
+        ]
         search = [
             "cross_order_two",
             "cross_order_n",
@@ -131,9 +169,33 @@ def space(problem: Any, setting: Any) -> SimpleNamespace:
             "search_insert",
             "reinit_permutation",
         ]
-        update = ["update_greedy", "update_round_robin", "update_pairwise", "update_always", "update_simulated_annealing"]
+        update = [
+            "update_greedy",
+            "update_round_robin",
+            "update_pairwise",
+            "update_always",
+            "update_simulated_annealing",
+        ]
     else:
-        raise NotImplementedError("space() currently supports continuous, discrete, and permutation problems")
+        raise NotImplementedError(
+            "space() currently supports continuous, discrete, and permutation problems"
+        )
+
+    choose.extend(
+        name
+        for name in compatible_custom_components("choose", ptype)
+        if name not in choose
+    )
+    search.extend(
+        name
+        for name in compatible_custom_components("search", ptype)
+        if name not in search
+    )
+    update.extend(
+        name
+        for name in compatible_custom_components("update", ptype)
+        if name not in update
+    )
 
     all_op = choose + search + update
     op_space = np.array(
@@ -194,8 +256,10 @@ def space(problem: Any, setting: Any) -> SimpleNamespace:
     set_obj.ParaLocalSpace = para_local_space
 
     # Provide defaults for downstream code
-    set_obj.TunePara = getattr(set_obj, "TunePara", False)
-    set_obj.alg_p = getattr(set_obj, "alg_p", 1)
-    set_obj.alg_q = getattr(set_obj, "alg_q", 3)
-    set_obj.alg_n = getattr(set_obj, "alg_n", 1)
+    set_obj.TunePara = getattr(
+        set_obj, "TunePara", getattr(set_obj, "tune_para", False)
+    )
+    set_obj.alg_p = getattr(set_obj, "alg_p", getattr(set_obj, "AlgP", 1))
+    set_obj.alg_q = getattr(set_obj, "alg_q", getattr(set_obj, "AlgQ", 3))
+    set_obj.alg_n = getattr(set_obj, "alg_n", getattr(set_obj, "AlgN", 1))
     return set_obj

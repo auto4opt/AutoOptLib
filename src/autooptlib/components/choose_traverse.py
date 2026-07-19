@@ -24,4 +24,3 @@ def choose_traverse(*args):
     if mode == "behavior":
         return ["", ""], None
     raise ValueError(f"Unsupported mode: {mode}")
-

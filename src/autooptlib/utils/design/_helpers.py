@@ -11,30 +11,31 @@ import numpy as np
 
 
 def _name_variants(name: str) -> list[str]:
-    variants = {name}
-    variants.add(name.lower())
-    variants.add(name.upper())
+    # Attribute lookup order matters when a compatibility namespace exposes
+    # both Python-style and MATLAB-style spellings.  Keep the caller's exact
+    # spelling first and de-duplicate without using an unordered set.
+    variants = [name, name.lower(), name.upper()]
     snake = re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
-    variants.add(snake)
+    variants.append(snake)
     if "_" in name:
         parts = name.split("_")
         camel = parts[0].lower() + "".join(p.title() for p in parts[1:])
         pascal = "".join(p.title() for p in parts)
-        variants.add(camel)
-        variants.add(pascal)
+        variants.extend([camel, pascal])
     else:
         parts = re.findall(r"[A-Za-z][^A-Z]*", name)
         if parts:
             joined = "_".join(part.lower() for part in parts)
-            variants.add(joined)
+            variants.append(joined)
             camel = parts[0].lower() + "".join(p.title() for p in parts[1:])
             pascal = "".join(p.title() for p in parts)
-            variants.add(camel)
-            variants.add(pascal)
-    return [v for v in variants if v]
+            variants.extend([camel, pascal])
+    return list(dict.fromkeys(v for v in variants if v))
 
 
-def get_flex(obj: Any, name: str, default: Any | None = None, *, required: bool = False) -> Any:
+def get_flex(
+    obj: Any, name: str, default: Any | None = None, *, required: bool = False
+) -> Any:
     if obj is None:
         if required:
             raise AttributeError(f"Cannot read {name!r} from None")
@@ -44,6 +45,17 @@ def get_flex(obj: Any, name: str, default: Any | None = None, *, required: bool 
             return obj[candidate]
         if hasattr(obj, candidate):
             return getattr(obj, candidate)
+    # Acronym-heavy legacy names such as ``ProbFE`` cannot be recovered by a
+    # generic camel-case conversion of ``prob_fe``.  Compare a punctuation-free
+    # form as a final compatibility step.
+    normalized = re.sub(r"[^a-z0-9]", "", name.lower())
+    try:
+        attributes = obj.keys() if isinstance(obj, dict) else vars(obj).keys()
+    except TypeError:
+        attributes = ()
+    for candidate in attributes:
+        if re.sub(r"[^a-z0-9]", "", str(candidate).lower()) == normalized:
+            return obj[candidate] if isinstance(obj, dict) else getattr(obj, candidate)
     if required:
         raise AttributeError(f"Attribute {name!r} not found on {obj!r}")
     return default

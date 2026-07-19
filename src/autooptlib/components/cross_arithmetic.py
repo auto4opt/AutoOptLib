@@ -24,7 +24,11 @@ def cross_arithmetic(*args: Any):
         first = parent[: (n + 1) // 2]
         second = parent[n // 2 :]
 
-        prob = np.asarray(para, dtype=float) if para is not None else np.array(0.5, dtype=float)
+        prob = (
+            np.asarray(para, dtype=float)
+            if para is not None
+            else np.array(0.5, dtype=float)
+        )
         if prob.ndim == 0:
             ratio = prob
         else:
@@ -42,4 +46,3 @@ def cross_arithmetic(*args: Any):
         return ["", "GS"], None
 
     raise ValueError(f"Unsupported mode: {mode}")
-

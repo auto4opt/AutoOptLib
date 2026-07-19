@@ -23,9 +23,13 @@ def _extract_decisions(solution) -> np.ndarray:
     return np.asarray(decs, dtype=float)
 
 
-def _nearest_better_clustering(distance: np.ndarray, fai: float, min_size: int, g: int, gmax: int) -> List[Species]:
+def _nearest_better_clustering(
+    distance: np.ndarray, fai: float, min_size: int, g: int, gmax: int
+) -> List[Species]:
     if min_size == -1:
-        min_size = round(3 + g / max(gmax, 1) * 7)
+        # MATLAB rounds positive .5 values away from zero; Python uses bankers'
+        # rounding, which changes species splitting at exact half steps.
+        min_size = int(np.floor(3 + g / max(gmax, 1) * 7 + 0.5))
 
     npop = distance.shape[0]
     nearest = np.full(npop, -1, dtype=int)
@@ -58,7 +62,10 @@ def _nearest_better_clustering(distance: np.ndarray, fai: float, min_size: int, 
         while nearest[top_index] != -1:
             top_index = nearest[top_index]
             chain.append(top_index)
-        if follow[inf_index] >= min_size and follow[top_index] - follow[inf_index] >= min_size:
+        if (
+            follow[inf_index] >= min_size
+            and follow[top_index] - follow[inf_index] >= min_size
+        ):
             nearest[inf_index] = -1
             dist_val[inf_index] = 0.0
             seeds.append(inf_index)

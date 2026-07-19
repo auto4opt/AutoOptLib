@@ -1,4 +1,5 @@
 """Creep mutation for discrete ordinal variables."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -30,7 +31,9 @@ def search_reset_creep(*args):
         aux = args[3] if len(args) > 3 else None
         rng = ensure_rng(aux)
 
-        params = np.asarray(para).reshape(-1) if para is not None else np.array([0.1, 0.1])
+        params = (
+            np.asarray(para).reshape(-1) if para is not None else np.array([0.1, 0.1])
+        )
         prob = float(params[0]) if params.size > 0 else 0.1
         amp_ratio = float(params[1]) if params.size > 1 else 0.1
 

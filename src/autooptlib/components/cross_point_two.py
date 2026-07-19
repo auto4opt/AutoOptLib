@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import numpy as np
 
+from ._utils import ensure_rng
+
 
 def cross_point_two(*args):
     mode = args[-1]
     if mode == "execute":
         parent = args[0]
-        aux = args[3] if len(args) > 3 else None  # noqa: F841
+        aux = args[3] if len(args) > 3 else None
+        rng = ensure_rng(aux, args[1] if len(args) > 1 else None)
         decs = getattr(parent, "decs", None)
         if callable(decs):
             parent = decs()
@@ -22,7 +25,9 @@ def cross_point_two(*args):
         p1 = parent[: (n + 1) // 2]
         p2 = parent[n // 2 :]
         nh = p1.shape[0]
-        k = np.sort(np.random.randint(0, d, size=(nh, 2)), axis=1)
+        k = np.vstack(
+            [np.sort(rng.choice(d, size=2, replace=False)) for _ in range(nh)]
+        )
         off1 = p1.copy()
         off2 = p2.copy()
         for i in range(nh):
@@ -30,7 +35,7 @@ def cross_point_two(*args):
             off1[i, a : b + 1] = p2[i, a : b + 1]
             off2[i, a : b + 1] = p1[i, a : b + 1]
         offspring = np.vstack([off1, off2])
-        return offspring[:n, :], args[3] if len(args) > 3 else None
+        return offspring[:n, :], aux
     if mode == "parameter":
         return None, None
     if mode == "behavior":
