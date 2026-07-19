@@ -2,11 +2,10 @@
 
 ## Installation
 
-AutoOptLib requires Python 3.9 or later. Until version 1.2.0 is available on
-PyPI, install it from a checkout:
+AutoOptLib requires Python 3.9 or later. Install the latest release from PyPI:
 
 ```bash
-python -m pip install .
+python -m pip install autooptlib
 ```
 
 For development and documentation builds:

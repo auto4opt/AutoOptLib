@@ -35,12 +35,10 @@ historical releases.
 
 AutoOptLib requires Python 3.9 or newer.
 
-Until 1.2.0 is published on PyPI, install it from a clone:
+Install the latest release from PyPI:
 
 ```bash
-git clone https://github.com/auto4opt/AutoOptLib.git
-cd AutoOptLib
-python -m pip install .
+python -m pip install autooptlib
 ```
 
 For development:

@@ -2,7 +2,7 @@
 
 All notable changes to AutoOptLib are documented here.
 
-## 1.2.0 - 2026-07-18
+## 1.2.0 - 2026-07-19
 
 ### Added
 
