@@ -1,23 +1,44 @@
+"""Public API for AutoOptLib."""
+
 from __future__ import annotations
 
-try:  # noqa: SIM105
-    from .utils.design import Design  # noqa: F401
-except Exception:  # pylint: disable=broad-except
-    Design = None  # type: ignore
+from ._version import __version__
+from .applications import (
+    MaterialStackingInstance,
+    RISBeamformingInstance,
+    StackingWeights,
+    generate_ris_instance,
+    generate_stacking_instance,
+    load_ris_matlab,
+    make_material_stacking_problem,
+    make_ris_beamforming_problem,
+)
+from .autoopt import autoopt
+from .components import get_component, register_component
+from .problems.base import ProblemDefinition, make_problem
+from .problems.cec2013 import cec2013_f1
+from .serialization import load_algorithm, save_algorithm
+from .utils.design import Design
+from .utils.solve import ObjectiveEvaluationError
 
-try:  # noqa: SIM105
-    from .components import get_component  # noqa: F401
-except Exception:  # pylint: disable=broad-except
-    get_component = None  # type: ignore
-
-try:  # noqa: SIM105
-    from .problems.cec2013 import cec2013_f1  # noqa: F401
-except Exception:  # pylint: disable=broad-except
-    cec2013_f1 = None  # type: ignore
-
-try:  # noqa: SIM105
-    from .autoopt import autoopt  # noqa: F401
-except Exception:  # pylint: disable=broad-except
-    autoopt = None  # type: ignore
-
-__all__ = [name for name in ("Design", "get_component", "cec2013_f1", "autoopt") if name in globals() and globals()[name] is not None]
+__all__ = [
+    "Design",
+    "MaterialStackingInstance",
+    "RISBeamformingInstance",
+    "StackingWeights",
+    "autoopt",
+    "cec2013_f1",
+    "get_component",
+    "generate_ris_instance",
+    "generate_stacking_instance",
+    "load_ris_matlab",
+    "make_material_stacking_problem",
+    "make_problem",
+    "make_ris_beamforming_problem",
+    "ObjectiveEvaluationError",
+    "ProblemDefinition",
+    "load_algorithm",
+    "save_algorithm",
+    "register_component",
+    "__version__",
+]

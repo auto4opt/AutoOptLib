@@ -30,7 +30,9 @@ def friedman_nemenyi(matrix: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         raise ValueError("Input to friedman_nemenyi must be 2-D")
     n, k = matrix.shape
     if n < 2 or k < 2:
-        raise ValueError("Friedman test requires at least two algorithms and two instances")
+        raise ValueError(
+            "Friedman test requires at least two algorithms and two instances"
+        )
 
     ranks = np.apply_along_axis(_rankdata, 1, matrix)
     avg_ranks = ranks.mean(axis=0)

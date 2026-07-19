@@ -21,16 +21,20 @@ def update_simulated_annealing(*args):
         fitness = extract_fits(solution)
         n = int(flex_get(problem, "N", len(sol_list) // 2))
         if len(sol_list) < 2 * n:
-            raise ValueError("update_simulated_annealing expects old and new populations of size N")
+            raise ValueError(
+                "update_simulated_annealing expects old and new populations of size N"
+            )
 
         try:
             t_initial = float(np.asarray(para).reshape(-1)[0])
         except Exception as exc:  # pylint: disable=broad-except
-            raise ValueError("Parameter for simulated annealing must be convertible to float") from exc
+            raise ValueError(
+                "Parameter for simulated annealing must be convertible to float"
+            ) from exc
         t_final = 0.01
         gmax = max(int(flex_get(problem, "Gmax", g + 1)), 1)
         rate = (t_final / t_initial) ** (1.0 / gmax)
-        temperature = t_initial * (rate ** g)
+        temperature = t_initial * (rate**g)
 
         old_list = sol_list[:n]
         new_list = sol_list[n : 2 * n]
@@ -57,4 +61,3 @@ def update_simulated_annealing(*args):
         return ["", ""], None
 
     raise ValueError(f"Unsupported mode: {mode}")
-

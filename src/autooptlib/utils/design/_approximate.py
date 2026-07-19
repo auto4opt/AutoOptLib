@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Iterable, List, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterable, List, Sequence
 
 import numpy as np
 
 from ._embedding import embedding
+from ._helpers import ensure_rng
 
 if TYPE_CHECKING:
     from . import Design
@@ -45,14 +46,14 @@ class _KNNModel:
         return preds
 
 
-def _mean_performance(alg: 'Design') -> float:
+def _mean_performance(alg: "Design") -> float:
     values = alg.ave_perform_all()
     if values.size == 0:
         return np.inf
     return float(np.mean(values))
 
 
-def _mean_performance_approx(alg: 'Design') -> float:
+def _mean_performance_approx(alg: "Design") -> float:
     values = alg.ave_perform_approx_all()
     if values.size == 0:
         return np.inf
@@ -62,56 +63,78 @@ def _mean_performance_approx(alg: 'Design') -> float:
 class Approximate:
     """Python translation of MATLAB Approximate class."""
 
-    def __init__(self, problem: Any, data: Any, setting: Any, ind_instance: Sequence[int]):
+    def __init__(
+        self, problem: Any, data: Any, setting: Any, ind_instance: Sequence[int]
+    ):
         from . import Design
 
-        self.data: List['Design'] = []
+        self.data: List["Design"] = []
         self.embedding = None
-        self.model: _KNNModel | None = None
+        self.model: Any = None
         self.rand_seed: np.ndarray
         self.exact_g: np.ndarray
 
         alg_p = int(getattr(setting, "AlgP", getattr(setting, "alg_p", 1)))
         alg_q = int(getattr(setting, "AlgQ", getattr(setting, "alg_q", 1)))
         total = (alg_q + 2) * 3 if alg_p == 1 else (alg_p + 2) * 3
-        self.rand_seed = np.random.permutation(total)
+        self.rand_seed = ensure_rng(setting).permutation(total)
 
-        exact_gmax = float(getattr(setting, "Surro", getattr(setting, "surro", 0)))
+        exact_budget = int(getattr(setting, "Surro", getattr(setting, "surro", 0)))
         alg_n = int(getattr(setting, "AlgN", getattr(setting, "alg_n", 1)))
-        alg_gmax = int(math.ceil(getattr(setting, "AlgFE", getattr(setting, "alg_fe", alg_n)) / alg_n))
-        step = alg_gmax / max(exact_gmax, 1.0) if exact_gmax else alg_gmax
+        alg_fe = int(getattr(setting, "AlgFE", getattr(setting, "alg_fe", alg_n)))
+        alg_gmax = max(1, int(math.ceil(alg_fe / alg_n)))
+        step = alg_gmax / max(exact_budget, 1) if exact_budget else alg_gmax
         self.exact_g = np.arange(1, alg_gmax + 1, max(1, int(round(step))))
 
         seeds = list(ind_instance)
-        train_algs_exact: List['Design'] = []
-        for _ in range(500):
+        train_algs_exact: List["Design"] = []
+        # Surrogate initialization is part of AlgFE.  The previous fixed pool
+        # of 500 exact algorithms made small experiments silently perform
+        # thousands of additional objective evaluations.
+        training_count = min(alg_fe, max(alg_n, exact_budget))
+        self.initial_evaluations = training_count
+        for _ in range(training_count):
             alg = Design(problem, setting)
             alg.evaluate(problem, data, setting, seeds)
             train_algs_exact.append(alg)
         self.data = train_algs_exact
 
-        train_algs_embed = [Design(problem, setting) for _ in range(1000)]
+        embedding_count = max(30, 3 * training_count)
+        train_algs_embed = [Design(problem, setting) for _ in range(embedding_count)]
         self.embedding = self.GetEmbed(train_algs_embed, setting)
         self.model = self.GetModel(self.data, setting)
 
     # Methods mirroring MATLAB class ---------------------------------------
-    def GetEmbed(self, data: Iterable['Design'], setting: Any):
+    def GetEmbed(self, data: Iterable["Design"], setting: Any):
         return embedding(list(data), setting, self, "get")
 
-    def UseEmbed(self, data: Iterable['Design'], setting: Any) -> np.ndarray:
+    def UseEmbed(self, data: Iterable["Design"], setting: Any) -> np.ndarray:
         return embedding(list(data), setting, self, "use")
 
-    def use_embed(self, data: Iterable['Design'], setting: Any) -> np.ndarray:
+    def use_embed(self, data: Iterable["Design"], setting: Any) -> np.ndarray:
         return self.UseEmbed(data, setting)
 
-    def GetModel(self, data: Iterable['Design'], setting: Any) -> _KNNModel:
-        embed_algs = self.UseEmbed(list(data), setting)
-        labels = np.array([_mean_performance(alg) for alg in data], dtype=float)
-        model = _KNNModel()
+    def GetModel(self, data: Iterable["Design"], setting: Any) -> Any:
+        algorithms = list(data)
+        embed_algs = self.UseEmbed(algorithms, setting)
+        labels = np.array([_mean_performance(alg) for alg in algorithms], dtype=float)
+        try:
+            from sklearn.ensemble import RandomForestRegressor
+
+            model = RandomForestRegressor(
+                n_estimators=1000,
+                min_samples_leaf=5,
+                random_state=getattr(setting, "Seed", getattr(setting, "seed", None)),
+                n_jobs=1,
+            )
+        except ImportError:
+            # Keep approximate mode usable in the NumPy-only core install;
+            # ``autooptlib[surrogate]`` activates the reference RF model.
+            model = _KNNModel()
         model.fit(embed_algs, labels)
         return model
 
-    def UpdateModel(self, algs: Sequence['Design'], setting: Any):
+    def UpdateModel(self, algs: Sequence["Design"], setting: Any):
         n = len(algs)
         actual = np.array([_mean_performance(alg) for alg in algs], dtype=float)
         approx = np.array([_mean_performance_approx(alg) for alg in algs], dtype=float)
@@ -127,6 +150,8 @@ class Approximate:
         self.model = self.GetModel(self.data, setting)
         return self
 
-    def UseModel(self, algs: Sequence['Design'], setting: Any) -> np.ndarray:
+    def UseModel(self, algs: Sequence["Design"], setting: Any) -> np.ndarray:
         features = self.UseEmbed(algs, setting)
-        return self.model.predict(features) if self.model else np.zeros(features.shape[0])
+        return (
+            self.model.predict(features) if self.model else np.zeros(features.shape[0])
+        )

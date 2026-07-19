@@ -1,3 +1,5 @@
+"""Run lightweight design and solve workflows for every bundled problem."""
+
 from __future__ import annotations
 
 import argparse
@@ -22,7 +24,7 @@ def _working_directory(path: Path):
 
 
 def _require_files(paths: Iterable[Path]) -> None:
-    missing = [str(p) for p in paths if not p.exists()]
+    missing = [str(path) for path in paths if not path.exists()]
     if missing:
         raise RuntimeError(f"expected output files missing: {', '.join(missing)}")
 

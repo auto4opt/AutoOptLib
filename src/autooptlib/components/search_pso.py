@@ -2,32 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 
+from ..utils.solve import SolutionSet
 from ._utils import ensure_rng, flex_get
-
-try:  # noqa: SIM105
-    from ..utils.solve import SolutionSet  # type: ignore
-except Exception:  # pylint: disable=broad-except
-    class SolutionSet(list):  # type: ignore
-        def __init__(self, items: Iterable[Any]):
-            super().__init__(items)
-
-        def decs(self) -> np.ndarray:
-            if not self:
-                return np.zeros((0, 0))
-            return np.vstack([np.asarray(flex_get(sol, "dec"), dtype=float) for sol in self])
-
-        def objs(self) -> np.ndarray:
-            return np.asarray([flex_get(sol, "obj") for sol in self], dtype=float).reshape(-1, 1)
-
-        def cons(self) -> np.ndarray:
-            return np.asarray([flex_get(sol, "con") for sol in self], dtype=float).reshape(-1, 1)
-
-        def fits(self) -> np.ndarray:
-            return np.asarray([flex_get(sol, "fit") for sol in self], dtype=float).reshape(-1, 1)
 
 
 def _ensure_solution_set(solution: Any) -> SolutionSet:
@@ -47,7 +27,6 @@ def search_pso(*args):
     mode = args[-1]
     if mode == "execute":
         solution_obj = args[0]
-        problem = args[1]
         para = args[2] if len(args) > 2 else None
         aux = args[3] if len(args) > 3 else None
         rng = ensure_rng(aux)
@@ -63,21 +42,22 @@ def search_pso(*args):
 
         if "Pbest" not in aux:
             aux["Pbest"] = SolutionSet([sol for sol in sol_set])
-            fits = flex_get(sol_set, "fits")
-            if fits is None:
-                fits = sol_set.fits()
-            fits = np.asarray(fits, dtype=float).reshape(-1)
-            best_idx = int(np.argmin(fits))
-            aux["Gbest"] = aux["Pbest"][best_idx]
+            # The original PSO component seeds the global guide with a random
+            # particle; ParaPSO promotes the best guide after evaluation.
+            aux["Gbest"] = aux["Pbest"][int(rng.integers(n))]
             aux["V"] = np.zeros((n, d))
 
         velocity = np.asarray(aux.get("V", np.zeros((n, d))), dtype=float)
         pbest = _extract_dec_matrix(aux["Pbest"])
         gbest = np.asarray(flex_get(aux["Gbest"], "dec"), dtype=float).reshape(1, -1)
 
-        r1 = rng.random((n, d))
-        r2 = rng.random((n, d))
-        velocity = inertia * velocity + 2 * r1 * (pbest - decs) + 2 * r2 * (gbest - decs)
+        # MATLAB draws one coefficient per particle and broadcasts it across
+        # dimensions, rather than drawing a coefficient per coordinate.
+        r1 = rng.random((n, 1))
+        r2 = rng.random((n, 1))
+        velocity = (
+            inertia * velocity + 2 * r1 * (pbest - decs) + 2 * r2 * (gbest - decs)
+        )
         offspring = decs + velocity
 
         aux["V"] = velocity

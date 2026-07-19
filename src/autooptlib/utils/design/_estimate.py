@@ -25,7 +25,9 @@ def _predict(model: Any, data: Any):
     raise AttributeError("Surrogate model lacks a predict method")
 
 
-def estimate(self, problem: Any, setting: Any, ind_instance: Sequence[int], surrogate: Any):
+def estimate(
+    self, problem: Any, setting: Any, ind_instance: Sequence[int], surrogate: Any
+):
     """Estimate the designed algorithm's performance using a surrogate model."""
     algs = [self]
     embed_algs = _call_use_embed(surrogate, algs, setting)

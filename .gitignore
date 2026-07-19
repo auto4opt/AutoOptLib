@@ -17,6 +17,7 @@ env/
 .pytest_cache/
 .coverage
 htmlcov/
+docs/_build/
 
 # IDE and editor settings
 .vscode/
@@ -26,6 +27,7 @@ htmlcov/
 
 # Generated experiment artifacts
 smoke_outputs/
+benchmarks/results/*/f*_d*/
 
 # Miscellaneous OS files
 Thumbs.db

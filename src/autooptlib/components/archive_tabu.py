@@ -18,4 +18,3 @@ def archive_tabu(*args: Any):
         return ["", ""], None
 
     raise ValueError(f"Unsupported mode: {mode}")
-

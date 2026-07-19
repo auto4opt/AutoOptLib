@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from ._utils import ensure_rng
+
 _KEY = "cauchy_eta"
 
 
@@ -29,11 +31,14 @@ def search_mu_cauchy(*args):
     if mode == "execute":
         parent = args[0]
         aux = args[3] if len(args) > 3 else None
+        rng = ensure_rng(aux, args[1] if len(args) > 1 else None)
         inner_g = int(args[5]) if len(args) > 5 else 1
 
         if not isinstance(parent, (np.ndarray, list, tuple)):
             decs = getattr(parent, "decs", None)
-            parent = decs() if callable(decs) else (decs if decs is not None else parent)
+            parent = (
+                decs() if callable(decs) else (decs if decs is not None else parent)
+            )
         parent = np.asarray(parent, dtype=float)
         n, d = parent.shape
 
@@ -43,16 +48,16 @@ def search_mu_cauchy(*args):
             if eta is not None and np.shape(eta) != (n, d):
                 eta = None
         if eta is None:
-            eta = np.random.rand(n, d)
+            eta = rng.random((n, d))
             _set_eta(aux, eta)
 
-        disturb = eta * np.random.standard_cauchy(size=(n, d))
+        disturb = eta * rng.standard_cauchy(size=(n, d))
         offspring = parent + disturb
 
         tau1 = 1.0 / np.sqrt(2.0 * np.sqrt(d))
         tau2 = 1.0 / np.sqrt(2.0 * d)
-        normal = np.random.randn(n, 1).repeat(d, axis=1)
-        normal_j = np.random.randn(n, d)
+        normal = rng.standard_normal((n, 1)).repeat(d, axis=1)
+        normal_j = rng.standard_normal((n, d))
         eta = eta * np.exp(tau2 * normal + tau1 * normal_j)
         _set_eta(aux, eta)
         return offspring, aux

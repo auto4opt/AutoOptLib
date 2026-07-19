@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from importlib import import_module
-from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Iterable, List
+from typing import Any, List
 
-from .utils.general import input_handler, output, process
+from .utils.general import input_handler, normalize_options, output, process
+from .utils.general.output import write_experiment_manifest
 
 
 def _to_arguments(kwargs: dict[str, Any]) -> List[Any]:
@@ -42,11 +42,15 @@ def autoopt(**kwargs: Any):
     )
     """
 
-    if "Mode" not in kwargs and "mode" not in kwargs:
+    kwargs = normalize_options(kwargs)
+    if "Mode" not in kwargs:
         raise ValueError("AutoOpt requires a Mode parameter ('design' or 'solve').")
 
-    mode = kwargs.get("Mode", kwargs.get("mode"))
-    setting = SimpleNamespace(Mode=str(mode))
+    mode = str(kwargs["Mode"]).lower()
+    kwargs["Mode"] = mode
+    manifest_options = dict(kwargs)
+    setting = SimpleNamespace(Mode=mode)
+    output_directory = kwargs.pop("OutputDir", None)
 
     arguments = _to_arguments(kwargs)
 
@@ -68,7 +72,15 @@ def autoopt(**kwargs: Any):
             instance_test,
             setting=setting,
         )
-        output(final_algs, alg_trace, instance_train, instance_test, setting=setting)
+        output(
+            final_algs,
+            alg_trace,
+            instance_train,
+            instance_test,
+            setting=setting,
+            directory=output_directory,
+        )
+        write_experiment_manifest(output_directory, mode=mode, options=manifest_options)
         return final_algs, alg_trace
 
     best_solutions, all_solutions = process(
@@ -76,7 +88,14 @@ def autoopt(**kwargs: Any):
         instance_solve,
         setting=setting,
     )
-    output(best_solutions, all_solutions, instance_solve, setting=setting)
+    output(
+        best_solutions,
+        all_solutions,
+        instance_solve,
+        setting=setting,
+        directory=output_directory,
+    )
+    write_experiment_manifest(output_directory, mode=mode, options=manifest_options)
     return best_solutions, all_solutions
 
 

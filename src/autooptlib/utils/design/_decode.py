@@ -50,9 +50,7 @@ def decode(operators, paras, problem: Any, setting: Any):
                 pathways.append(
                     Pathway(choose="", search=[], update="", archive=list(archive))
                 )
-                pathway_params.append(
-                    PathwayParam(choose=None, search=[], update=None)
-                )
+                pathway_params.append(PathwayParam(choose=None, search=[], update=None))
                 continue
 
             choose_idx = int(matrix[0, 0])
@@ -88,7 +86,11 @@ def decode(operators, paras, problem: Any, setting: Any):
                 secondary_param = None
                 termination = np.array([rate, inner_g_max], dtype=float)
 
-                if primary_idx in ind_cross and row < matrix.shape[0] and matrix[row, 1] in ind_mu:
+                if (
+                    primary_idx in ind_cross
+                    and row < matrix.shape[0]
+                    and matrix[row, 1] in ind_mu
+                ):
                     secondary_idx = int(matrix[row, 1])
                     secondary_name = all_op[secondary_idx - 1]
                     if secondary_idx - 1 < len(paras[algo_idx]):
@@ -119,7 +121,11 @@ def decode(operators, paras, problem: Any, setting: Any):
                     row += 1
 
                 search_steps.append(
-                    SearchStep(primary=primary_name, secondary=secondary_name, termination=termination)
+                    SearchStep(
+                        primary=primary_name,
+                        secondary=secondary_name,
+                        termination=termination,
+                    )
                 )
                 search_params.append(
                     SearchParam(primary=primary_param, secondary=secondary_param)
@@ -145,4 +151,3 @@ def decode(operators, paras, problem: Any, setting: Any):
         para_pheno.append(pathway_params)
 
     return op_pheno, para_pheno
-

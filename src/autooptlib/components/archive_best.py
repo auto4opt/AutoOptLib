@@ -15,7 +15,9 @@ def _extract_fits(solution) -> np.ndarray:
     try:
         seq = list(solution)
     except TypeError as exc:  # not iterable
-        raise ValueError("Solution must expose fits() or be iterable of items with fitness") from exc
+        raise ValueError(
+            "Solution must expose fits() or be iterable of items with fitness"
+        ) from exc
     vals = []
     for it in seq:
         val = getattr(it, "fit", None)
@@ -23,7 +25,9 @@ def _extract_fits(solution) -> np.ndarray:
             obj = getattr(it, "obj", None)
             con = getattr(it, "con", None)
             if obj is None:
-                raise ValueError("Item lacks fit/obj attributes for fitness computation")
+                raise ValueError(
+                    "Item lacks fit/obj attributes for fitness computation"
+                )
             if con is None:
                 val = float(obj)
             else:

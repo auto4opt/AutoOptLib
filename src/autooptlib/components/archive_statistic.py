@@ -1,7 +1,6 @@
 """Track mean and std of fitness."""
-from __future__ import annotations
 
-from typing import Any, Sequence
+from __future__ import annotations
 
 import numpy as np
 
@@ -19,7 +18,8 @@ def archive_statistic(*args):
             values = np.asarray(fits()).reshape(-1)
         else:
             values = np.asarray(fits).reshape(-1)
-        stat = np.array([[np.mean(values), np.std(values)]])
+        std = np.std(values, ddof=1) if values.size > 1 else 0.0
+        stat = np.array([[np.mean(values), std]])
         if archive is None or len(archive) == 0:
             return stat, None
         archive_arr = np.asarray(archive)

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from ._utils import ensure_rng
+
 
 def reinit_continuous(*args):
     mode = args[-1]
@@ -11,6 +13,7 @@ def reinit_continuous(*args):
         solution = args[0]
         problem = args[1] if len(args) > 1 else None
         aux = args[3] if len(args) > 3 else None
+        rng = ensure_rng(aux, problem)
 
         try:
             n = len(solution)
@@ -19,7 +22,7 @@ def reinit_continuous(*args):
         bound = getattr(problem, "bound")
         lower = np.asarray(bound[0], dtype=float)
         upper = np.asarray(bound[1], dtype=float)
-        dec = lower + (upper - lower) * np.random.rand(n, lower.shape[-1])
+        dec = lower + (upper - lower) * rng.random((n, lower.shape[-1]))
         return dec, aux
 
     if mode == "parameter":

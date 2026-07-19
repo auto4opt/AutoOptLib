@@ -1,0 +1,30 @@
+{
+  "schema": "autooptlib.algorithm",
+  "schema_version": 1,
+  "autooptlib_version": "1.2.0",
+  "metadata": {
+    "name": "Alg*_beamform",
+    "application": "ris_beamforming",
+    "source": "AutoOptLib software paper pseudocode",
+    "parameter": "uniform crossover probability 0.1229",
+    "scope": "structure only; paper result reproduction requires the original channel instances"
+  },
+  "pathways": [
+    {
+      "choose": "choose_nich",
+      "choose_parameter": null,
+      "search": [
+        {
+          "primary": "cross_point_uniform",
+          "secondary": "search_reset_one",
+          "termination": [{"$float": "-inf"}, 1.0],
+          "primary_parameter": [0.1229],
+          "secondary_parameter": null
+        }
+      ],
+      "update": "update_round_robin",
+      "update_parameter": null,
+      "archive": []
+    }
+  ]
+}

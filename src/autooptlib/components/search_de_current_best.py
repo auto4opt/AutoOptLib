@@ -1,8 +1,10 @@
-"""Python translation of search_de_current_best.""" 
+"""Python translation of search_de_current_best."""
 
 from __future__ import annotations
 
 import numpy as np
+
+from ._utils import ensure_rng
 
 
 def search_de_current_best(*args):
@@ -10,18 +12,25 @@ def search_de_current_best(*args):
     if mode == "execute":
         parent_obj = args[0]
         para = args[2] if len(args) > 2 else None
-        aux = args[3] if len(args) > 3 else None  # noqa: F841
+        aux = args[3] if len(args) > 3 else None
+        rng = ensure_rng(aux, args[1] if len(args) > 1 else None)
         fits = getattr(parent_obj, "fits", None)
         if callable(fits):
             fit_vals = np.asarray(fits()).reshape(-1)
         else:
-            fit_vals = np.asarray(fits if fits is not None else getattr(parent_obj, "fit", None)).reshape(-1)
+            fit_vals = np.asarray(
+                fits if fits is not None else getattr(parent_obj, "fit", None)
+            ).reshape(-1)
         best_idx = int(np.argmin(fit_vals))
         best_dec = getattr(parent_obj[best_idx], "dec", None)
         if callable(best_dec):
             gbest = np.asarray(best_dec())
         else:
-            gbest = np.asarray(best_dec if best_dec is not None else getattr(parent_obj, "decs")[best_idx])
+            gbest = np.asarray(
+                best_dec
+                if best_dec is not None
+                else getattr(parent_obj, "decs")[best_idx]
+            )
         decs = getattr(parent_obj, "decs", None)
         if callable(decs):
             parent = decs()
@@ -37,11 +46,11 @@ def search_de_current_best(*args):
             cr = float(arr[1]) if arr.size > 1 else 0.5
         p1 = parent.copy()
         p2 = np.repeat(gbest.reshape(1, -1), n, axis=0)
-        p3 = parent[np.random.permutation(n)]
-        mask = np.random.rand(n, d) < cr
+        p3 = parent[rng.permutation(n)]
+        mask = rng.random((n, d)) < cr
         offspring = parent.copy()
         offspring[mask] = p1[mask] + f * (p2[mask] - p3[mask])
-        return offspring, args[3] if len(args) > 3 else None
+        return offspring, aux
     if mode == "parameter":
         return [[0, 1], [0, 1]], None
     if mode == "behavior":

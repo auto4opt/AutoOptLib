@@ -4,14 +4,21 @@ from __future__ import annotations
 
 import numpy as np
 
+from ._utils import ensure_rng
+
 
 def cross_point_n(*args):
     mode = args[-1]
     if mode == "execute":
         parent = args[0]
         para = args[2] if len(args) > 2 else None
-        aux = args[3] if len(args) > 3 else None  # noqa: F841
-        n_points = int(round(float(np.asarray(para).reshape(-1)[0]))) if para is not None else 1
+        aux = args[3] if len(args) > 3 else None
+        rng = ensure_rng(aux, args[1] if len(args) > 1 else None)
+        n_points = (
+            int(round(float(np.asarray(para).reshape(-1)[0])))
+            if para is not None
+            else 1
+        )
         decs = getattr(parent, "decs", None)
         if callable(decs):
             parent = decs()
@@ -25,11 +32,11 @@ def cross_point_n(*args):
         off1 = p1.copy()
         off2 = p2.copy()
         for i in range(nh):
-            k = np.random.choice(d, size=min(max(1, n_points), d), replace=False)
+            k = rng.choice(d, size=min(max(1, n_points), d), replace=False)
             off1[i, k] = p2[i, k]
             off2[i, k] = p1[i, k]
         offspring = np.vstack([off1, off2])
-        return offspring[:n, :], args[3] if len(args) > 3 else None
+        return offspring[:n, :], aux
     if mode == "parameter":
         # Cannot compute D without Problem here; return a reasonable default range
         return [1, 5], None

@@ -1,0 +1,36 @@
+{
+  "schema": "autooptlib.algorithm",
+  "schema_version": 1,
+  "autooptlib_version": "1.2.0",
+  "metadata": {
+    "name": "Alg*_f21",
+    "problem": "cec2013_f21",
+    "source": "AutoOptLib software paper pseudocode",
+    "note": "The 25-iteration local-search cap follows InnerFE=500 and design population 20."
+  },
+  "pathways": [
+    {
+      "choose": "choose_traverse",
+      "choose_parameter": null,
+      "search": [
+        {
+          "primary": "search_de_random",
+          "secondary": null,
+          "termination": [0.05, 25.0],
+          "primary_parameter": [0.0562, 0.1047],
+          "secondary_parameter": null
+        },
+        {
+          "primary": "cross_point_one",
+          "secondary": "search_mu_polynomial",
+          "termination": [{"$float": "-inf"}, 1.0],
+          "primary_parameter": null,
+          "secondary_parameter": [0.2767, 28.1453]
+        }
+      ],
+      "update": "update_pairwise",
+      "update_parameter": null,
+      "archive": []
+    }
+  ]
+}

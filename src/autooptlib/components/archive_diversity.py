@@ -1,11 +1,12 @@
 """Select the most diversified solutions for the archive."""
+
 from __future__ import annotations
 
 from typing import Any, Sequence
 
 import numpy as np
 
-from ._utils import flex_get
+from ._utils import ensure_rng, flex_get
 
 
 def _ensure_solution_list(sol: Any) -> list:
@@ -15,7 +16,9 @@ def _ensure_solution_list(sol: Any) -> list:
 
 
 def _stack_decs(sol_list: list) -> np.ndarray:
-    decs = [np.asarray(flex_get(s, "dec"), dtype=float).reshape(1, -1) for s in sol_list]
+    decs = [
+        np.asarray(flex_get(s, "dec"), dtype=float).reshape(1, -1) for s in sol_list
+    ]
     return np.vstack(decs)
 
 
@@ -25,6 +28,7 @@ def archive_diversity(*args):
         solutions = _ensure_solution_list(args[0])
         archive = _ensure_solution_list(args[1]) if len(args) > 1 else []
         problem = args[2] if len(args) > 2 else None
+        rng = ensure_rng(problem)
 
         combined = solutions + archive
         if not combined:
@@ -38,7 +42,7 @@ def archive_diversity(*args):
         else:
             dist = np.mean(decs[:, None, :] != decs[None, :, :], axis=-1)
         n = int(flex_get(problem, "N", len(solutions)))
-        chosen = [int(np.random.randint(len(combined)))]
+        chosen = [int(rng.integers(len(combined)))]
         while len(chosen) < n and len(chosen) < len(combined):
             sums = np.sum(dist[chosen], axis=0)
             order = np.argsort(sums)[::-1]

@@ -8,6 +8,7 @@ import numpy as np
 
 
 def _normalize(vec: np.ndarray) -> np.ndarray:
+    vec = np.nan_to_num(np.asarray(vec, dtype=float), nan=0.0, posinf=1e6, neginf=-1e6)
     vmin = np.min(vec)
     vmax = np.max(vec)
     if np.isclose(vmax, vmin):
@@ -51,7 +52,9 @@ def _vectorize_single_path(alg: Any, setting: Any, rand_seed: np.ndarray) -> np.
             entry = None
         parameter[:, idx] = _extract_parameter_values(entry, max_len=2)
 
-    parameter_flat = parameter.reshape(1, -1)
+    # MATLAB linearizes matrices column-by-column.  The embedding learned for
+    # the reference implementation therefore depends on Fortran ordering.
+    parameter_flat = parameter.reshape(1, -1, order="F")
     operator_norm = _normalize(operator)
     vector = np.concatenate([operator_norm, parameter_flat.ravel()])
     shuffled = vector[rand_seed]
@@ -72,16 +75,22 @@ def _vectorize_multi_path(alg: Any, setting: Any, rand_seed: np.ndarray) -> np.n
     parameter = np.zeros((2, alg_p + 2), dtype=float)
     choose_idx = int(operator[0])
     if choose_idx > 0 and choose_idx - 1 < len(alg.parameter):
-        parameter[:, 0] = _extract_parameter_values(alg.parameter[choose_idx - 1], max_len=2)
+        parameter[:, 0] = _extract_parameter_values(
+            alg.parameter[choose_idx - 1], max_len=2
+        )
     for j in range(alg_p):
         op_idx = int(operator[j + 1])
         if op_idx > 0 and op_idx - 1 < len(alg.parameter):
-            parameter[:, j + 1] = _extract_parameter_values(alg.parameter[op_idx - 1], max_len=2)
+            parameter[:, j + 1] = _extract_parameter_values(
+                alg.parameter[op_idx - 1], max_len=2
+            )
     update_idx = int(operator[-1])
     if update_idx > 0 and update_idx - 1 < len(alg.parameter):
-        parameter[:, -1] = _extract_parameter_values(alg.parameter[update_idx - 1], max_len=2)
+        parameter[:, -1] = _extract_parameter_values(
+            alg.parameter[update_idx - 1], max_len=2
+        )
 
-    parameter_flat = parameter.reshape(1, -1)
+    parameter_flat = parameter.reshape(1, -1, order="F")
     lower = 1.0
     upper = float(max(len(alg.parameter), 1))
     if np.isclose(upper, lower):
@@ -128,7 +137,9 @@ def embedding(algs: Sequence[Any], setting: Any, surrogate: Any, mode: str) -> A
         if embed_map is None:
             raise ValueError("Surrogate does not provide a precomputed embedding map")
         temp = np.vstack([VectorAlgs, np.ones((1, VectorAlgs.shape[1]))])
-        wx = embed_map[:, :, 0] @ temp
+        with np.errstate(all="ignore"):
+            wx = embed_map[:, :, 0] @ temp
+        wx = np.nan_to_num(wx, nan=0.0, posinf=1e6, neginf=-1e6)
         rows = len(rand_seed) // 3
         argslist = np.zeros((rows, len(alg_list)))
         for i in range(len(alg_list)):
@@ -137,7 +148,9 @@ def embedding(algs: Sequence[Any], setting: Any, surrogate: Any, mode: str) -> A
         wx = np.tanh(argslist)
         for i in range(1, embed_map.shape[2]):
             wx = np.vstack([wx, np.ones((1, wx.shape[1]))])
-            wx = embed_map[:, :, i] @ wx
+            with np.errstate(all="ignore"):
+                wx = embed_map[:, :, i] @ wx
+            wx = np.nan_to_num(wx, nan=0.0, posinf=1e6, neginf=-1e6)
             wx = np.tanh(wx)
         return wx.T
     raise ValueError(f"Unsupported mode: {mode}")
@@ -163,17 +176,23 @@ def _mda_de(x: np.ndarray, p: float):
     x_aug = np.vstack([x, np.ones((1, x.shape[1]))])
     d_aug = x_aug.shape[0]
     q = np.concatenate([np.full(d_aug - 1, 1 - p), [1.0]])
-    s = x_aug @ x_aug.T
+    with np.errstate(all="ignore"):
+        s = x_aug @ x_aug.T
+    s = np.nan_to_num(s, nan=0.0, posinf=1e12, neginf=-1e12)
     q_outer = s * (q[:, None] * q[None, :])
     diag_idx = np.arange(d_aug)
     q_outer[diag_idx, diag_idx] = q * np.diag(s)
     p_mat = s * q[np.newaxis, :]
     reg = q_outer + 1e-5 * np.eye(d_aug)
-    w = p_mat[:-1, :] @ np.linalg.pinv(reg)
+    with np.errstate(all="ignore"):
+        w = p_mat[:-1, :] @ np.linalg.pinv(reg)
+    w = np.nan_to_num(w, nan=0.0, posinf=1e6, neginf=-1e6)
 
     length = x_aug.shape[1] // 3
     h = np.zeros((d_aug - 1, length))
-    wx = w @ x_aug
+    with np.errstate(all="ignore"):
+        wx = w @ x_aug
+    wx = np.nan_to_num(wx, nan=0.0, posinf=1e6, neginf=-1e6)
     for i in range(length):
         block = wx[:, 3 * i : 3 * i + 3]
         h[:, i] = np.sum(block, axis=1) / 3.0
@@ -184,12 +203,19 @@ def _mda(x: np.ndarray, p: float):
     x_aug = np.vstack([x, np.ones((1, x.shape[1]))])
     d_aug = x_aug.shape[0]
     q = np.concatenate([np.full(d_aug - 1, 1 - p), [1.0]])
-    s = x_aug @ x_aug.T
+    with np.errstate(all="ignore"):
+        s = x_aug @ x_aug.T
+    s = np.nan_to_num(s, nan=0.0, posinf=1e12, neginf=-1e12)
     q_outer = s * (q[:, None] * q[None, :])
     diag_idx = np.arange(d_aug)
     q_outer[diag_idx, diag_idx] = q * np.diag(s)
     p_mat = s * q[np.newaxis, :]
     reg = q_outer + 1e-5 * np.eye(d_aug)
-    w = p_mat[:-1, :] @ np.linalg.pinv(reg)
-    h = np.tanh(w @ x_aug)
+    with np.errstate(all="ignore"):
+        w = p_mat[:-1, :] @ np.linalg.pinv(reg)
+    w = np.nan_to_num(w, nan=0.0, posinf=1e6, neginf=-1e6)
+    with np.errstate(all="ignore"):
+        projected = w @ x_aug
+    projected = np.nan_to_num(projected, nan=0.0, posinf=1e6, neginf=-1e6)
+    h = np.tanh(projected)
     return w, h

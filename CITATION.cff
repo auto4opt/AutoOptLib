@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use AutoOptLib, please cite this software and the accompanying paper."
+title: "AutoOptLib"
+type: software
+version: 1.2.0
+date-released: 2026-07-19
+license: Apache-2.0
+repository-code: "https://github.com/auto4opt/AutoOptLib"
+url: "https://github.com/auto4opt/AutoOptLib"
+authors:
+  - family-names: Zhao
+    given-names: Qi
+    email: zhaoq@sustech.edu.cn
+  - family-names: Liu
+    given-names: Jinrun
+  - family-names: Yan
+    given-names: Bai
+  - family-names: Duan
+    given-names: Qiqi
+  - family-names: Shi
+    given-names: Yuhui
+preferred-citation:
+  type: article
+  title: "AutoOptLib: Tailoring Metaheuristic Optimizers via Automated Algorithm Design"
+  authors:
+    - family-names: Zhao
+      given-names: Qi
+    - family-names: Yan
+      given-names: Bai
+    - family-names: Hu
+      given-names: Taiwei
+    - family-names: Chen
+      given-names: Xianglong
+    - family-names: Duan
+      given-names: Qiqi
+    - family-names: Yang
+      given-names: Jian
+    - family-names: Shi
+      given-names: Yuhui
+  year: 2023
+  identifiers:
+    - type: doi
+      value: 10.48550/arXiv.2303.06536

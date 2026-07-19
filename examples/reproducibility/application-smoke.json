@@ -1,0 +1,36 @@
+{
+  "seed": 2026,
+  "runs": 2,
+  "prob_n": 5,
+  "prob_fe": 20,
+  "algorithms": [
+    "Discrete Random Search",
+    "Discrete Genetic Algorithm",
+    "Discrete Iterative Local Search",
+    "Discrete Simulated Annealing",
+    {
+      "label": "Alg*_stack (structure)",
+      "file": "examples/applications/algorithms/material_stacking_alg_star.json",
+      "applications": ["material_stacking"]
+    },
+    {
+      "label": "Alg*_beamform (structure)",
+      "file": "examples/applications/algorithms/ris_beamforming_alg_star.json",
+      "applications": ["ris_beamforming"]
+    }
+  ],
+  "applications": {
+    "material_stacking": {
+      "instances": [
+        {"id": "stack-test-12", "size": 12, "seed": 101},
+        {"id": "stack-test-16", "size": 16, "seed": 102}
+      ]
+    },
+    "ris_beamforming": {
+      "instances": [
+        {"id": "ris-test-12", "size": 12, "seed": 201},
+        {"id": "ris-test-16", "size": 16, "seed": 202}
+      ]
+    }
+  }
+}

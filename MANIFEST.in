@@ -1,0 +1,13 @@
+include CHANGELOG.md
+include CITATION.cff
+include CODE_OF_CONDUCT.md
+include CONTRIBUTING.md
+include LICENSE
+include README.md
+include SECURITY.md
+include pyproject.toml
+include .readthedocs.yaml
+include scripts/smoke_all_problems.py
+recursive-include docs *.md *.rst *.py
+recursive-include examples *.json *.md *.py
+recursive-include tests *.py
