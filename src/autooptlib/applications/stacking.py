@@ -124,7 +124,7 @@ def stacking_objective(
     levels, positions, orientations = _decode(decision, instance)
     heights = np.where(orientations == 0, instance.heights, instance.widths)
 
-    level_heights = np.zeros(instance.n_levels, dtype=float)
+    level_heights: np.ndarray = np.zeros(instance.n_levels, dtype=float)
     for level in range(instance.n_levels):
         members = levels == level
         if np.any(members):
@@ -162,8 +162,8 @@ def stacking_constraints(
     instance.validate()
     levels, _, orientations = _decode(decision, instance)
     widths = np.where(orientations == 0, instance.widths, instance.heights)
-    width_excess = np.zeros(instance.n_levels, dtype=float)
-    weight_excess = np.zeros(instance.n_levels, dtype=float)
+    width_excess: np.ndarray = np.zeros(instance.n_levels, dtype=float)
+    weight_excess: np.ndarray = np.zeros(instance.n_levels, dtype=float)
     for level in range(instance.n_levels):
         members = levels == level
         width_excess[level] = float(np.sum(widths[members]) - instance.rack_width)
@@ -221,7 +221,7 @@ def make_material_stacking_problem(
 
     def bounds(instance_id: Hashable) -> np.ndarray:
         instance = get_data(instance_id)
-        lower = np.zeros(instance.dimension, dtype=int)
+        lower: np.ndarray = np.zeros(instance.dimension, dtype=int)
         upper = np.concatenate(
             (
                 np.full(instance.n_items, instance.n_levels - 1, dtype=int),

@@ -271,9 +271,9 @@ def test_failed_objective_is_retried_then_succeeds(tmp_path):
         Problem=problem,
         InstanceSolve=[1],
         AlgName="Continuous Random Search",
+        AlgRuns=1,
         ProbN=2,
         ProbFE=2,
-        AlgRuns=1,
         EvalRetries=2,
         OutputDir=tmp_path,
     )
@@ -347,6 +347,7 @@ def test_candidate_evaluations_can_run_in_parallel(tmp_path):
         Problem=problem,
         InstanceSolve=[1],
         AlgName="Continuous Random Search",
+        AlgRuns=1,
         ProbN=2,
         ProbFE=2,
         EvalWorkers=2,
