@@ -1,6 +1,6 @@
 # AutoOptLib
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/auto4opt/AutoOptLib/releases)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/auto4opt/AutoOptLib/releases)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
 [![Tests](https://github.com/auto4opt/AutoOptLib/actions/workflows/tests.yml/badge.svg)](https://github.com/auto4opt/AutoOptLib/actions/workflows/tests.yml)
 [![Documentation](https://readthedocs.org/projects/autooptlib/badge/?version=latest)](https://autooptlib.readthedocs.io/)
@@ -30,6 +30,8 @@ historical releases.
 - Retry, hard-timeout, failure-penalty, evaluation-cache, and JSONL logging
   controls for external objectives.
 - Automatic experiment manifests with software and invocation provenance.
+- Optional ALDes autoregressive generation, PPO training, continual-learning,
+  and pure-Python execution of an ALDes-compatible discrete token vocabulary.
 
 ## Installation
 
@@ -48,6 +50,13 @@ python -m pip install -e ".[dev]"
 python -m ruff check .
 python -m ruff format --check .
 python -m pytest -W error
+```
+
+Install the learning-based ALDes designer separately so core users do not
+need PyTorch or IOH:
+
+```bash
+python -m pip install "autooptlib[aldes]"
 ```
 
 ## Quick start
@@ -124,6 +133,51 @@ is a hard upper bound per algorithm run. For compatibility with the published
 MATLAB procedure, `AlgFE` counts newly proposed algorithms after the initial
 `AlgN` incumbents; held-out evaluation of the final algorithms is separate.
 Sequential problems receive a fresh `ProbFE` budget at every stage.
+
+## Learning-based design with ALDes
+
+`autooptlib.aldes` contains a constrained 32-token ALDes grammar,
+sequence-to-pathway codec,
+PyTorch generator, PPO/EWC training utilities, IOH PBO adapter, and a direct
+evaluation bridge. A trained generator can be used through the same high-level
+entry point:
+
+```python
+from autooptlib import autoopt
+
+algorithms, trace = autoopt(
+    Mode="design",
+    Designer="aldes",
+    Problem=my_discrete_problem,
+    InstanceTrain=[train_instance],
+    InstanceTest=[test_instance],
+    ALDesModel="checkpoints/aldes.pt",
+    ALDesCandidates=32,
+    AlgN=5,
+    ProbN=50,
+    ProbFE=5_000,
+    AlgRuns=5,
+    Seed=2026,
+)
+```
+
+Single-problem design is the default: create the generator with the default
+`GeneratorConfig`, use `ALDesMode="single"` (or omit it), and do not calculate
+or pass landscape features. For continual design, train a generator with
+`GeneratorConfig(condition_on_features=True)` and call the workflow with
+`ALDesMode="continual"` plus `ALDesFeatures=problem_features`. The continual
+feature extractor is available as `autooptlib.aldes.extract_pbo_features` and
+returns both the feature vector and sampled initial populations. Its result
+object can be passed directly as `ALDesFeatures`; the associated populations
+are then reused automatically, or they can be supplied separately through
+`ALDesInitialPopulations`.
+
+The ordinary `Designer="search"` workflow remains the default. ALDes decodes
+its generated programs into the same `Design` and pathway objects used by the
+rest of AutoOptLib; MATLAB and MATLAB Engine are not required.
+`ALDesModel` checkpoint paths must be produced by
+`ALDesGenerator.save_checkpoint`; unversioned checkpoints from the historical
+standalone ALDes repository are not loaded implicitly.
 
 ## Reproducibility
 

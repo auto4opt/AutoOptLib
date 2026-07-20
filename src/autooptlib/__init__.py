@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from . import aldes
 from ._version import __version__
 from .applications import (
     MaterialStackingInstance,
@@ -23,6 +24,7 @@ from .utils.solve import ObjectiveEvaluationError
 
 __all__ = [
     "Design",
+    "aldes",
     "MaterialStackingInstance",
     "RISBeamformingInstance",
     "StackingWeights",

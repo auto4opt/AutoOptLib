@@ -44,6 +44,14 @@ _PARAM_KEYS = {
     "CheckpointDir",
     "CheckpointEvery",
     "Resume",
+    "Designer",
+    "ALDesModel",
+    "ALDesFeatures",
+    "ALDesCandidates",
+    "ALDesTemperature",
+    "ALDesGreedy",
+    "ALDesMode",
+    "ALDesInitialPopulations",
 }
 
 _DATA_KEYS = {"Mode", "Problem", "InstanceTrain", "InstanceTest", "InstanceSolve"}
@@ -71,6 +79,14 @@ _COMMON_DEFAULTS = {
     "CheckpointDir": None,
     "CheckpointEvery": 1,
     "Resume": False,
+    "Designer": "search",
+    "ALDesModel": None,
+    "ALDesFeatures": None,
+    "ALDesCandidates": None,
+    "ALDesTemperature": 1.0,
+    "ALDesGreedy": False,
+    "ALDesMode": "single",
+    "ALDesInitialPopulations": None,
 }
 
 _DESIGN_DEFAULTS = {
@@ -148,13 +164,16 @@ def _ensure_namespace(setting: Any) -> SimpleNamespace:
 def _find_argument(arguments: Sequence[Any], name: str) -> tuple[bool, Any]:
     if not arguments:
         return False, None
-    try:
-        idx = arguments.index(name)
-    except ValueError:
-        return False, None
-    if idx + 1 >= len(arguments):
-        raise ValueError(f'Missing value for argument "{name}"')
-    return True, arguments[idx + 1]
+    # Arguments are alternating key/value pairs. Searching the whole list
+    # compares ``name`` against user values too; a NumPy feature array then
+    # raises an ambiguous-truth-value ValueError and hides later options.
+    for idx in range(0, len(arguments), 2):
+        key = arguments[idx]
+        if isinstance(key, str) and key == name:
+            if idx + 1 >= len(arguments):
+                raise ValueError(f'Missing value for argument "{name}"')
+            return True, arguments[idx + 1]
+    return False, None
 
 
 def _to_list(obj: Any) -> list[Any]:
@@ -274,6 +293,31 @@ def _check_setting(setting: SimpleNamespace) -> None:
         raise ValueError("CheckpointEvery must be a positive integer.")
     if not isinstance(getattr(setting, "Resume", False), bool):
         raise ValueError("Resume must be a boolean.")
+    designer = str(getattr(setting, "Designer", "search")).lower()
+    if designer not in {"search", "aldes"}:
+        raise ValueError("Designer must be 'search' or 'aldes'.")
+    setting.Designer = designer
+    aldes_candidates = getattr(setting, "ALDesCandidates", None)
+    if aldes_candidates is not None and (
+        not isinstance(aldes_candidates, Integral)
+        or isinstance(aldes_candidates, bool)
+        or aldes_candidates <= 0
+    ):
+        raise ValueError("ALDesCandidates must be a positive integer or None.")
+    aldes_temperature = getattr(setting, "ALDesTemperature", 1.0)
+    if (
+        not isinstance(aldes_temperature, Real)
+        or isinstance(aldes_temperature, bool)
+        or not math.isfinite(float(aldes_temperature))
+        or aldes_temperature <= 0
+    ):
+        raise ValueError("ALDesTemperature must be a positive finite number.")
+    if not isinstance(getattr(setting, "ALDesGreedy", False), bool):
+        raise ValueError("ALDesGreedy must be a boolean.")
+    aldes_mode = str(getattr(setting, "ALDesMode", "single")).lower()
+    if aldes_mode not in {"single", "continual"}:
+        raise ValueError("ALDesMode must be 'single' or 'continual'.")
+    setting.ALDesMode = aldes_mode
     if mode == "design":
         for name in (
             "AlgP",

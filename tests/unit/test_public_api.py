@@ -14,7 +14,7 @@ from autooptlib import get_component, register_component
 
 
 def test_public_version_matches_release():
-    assert autooptlib.__version__ == "1.2.0"
+    assert autooptlib.__version__ == "1.3.0"
 
 
 def test_cec_archive_is_a_package_resource():

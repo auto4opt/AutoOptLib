@@ -45,7 +45,7 @@ def search_reset_rand(*args):
         return new, aux
 
     if mode == "parameter":
-        return [0, 0.5], None
+        return [0.05, 0.5], None
 
     if mode == "behavior":
         return [["LS", "small"], ["GS", "large"]], None

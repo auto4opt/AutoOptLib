@@ -468,7 +468,7 @@ def test_experiment_manifest_records_environment_and_options(tmp_path):
     )
     manifest = json.loads((tmp_path / "experiment.json").read_text())
     assert manifest["schema"] == "autooptlib.experiment"
-    assert manifest["software"]["autooptlib"] == "1.2.0"
+    assert manifest["software"]["autooptlib"] == "1.3.0"
     assert manifest["options"]["Seed"] == 42
     assert manifest["options"]["Problem"].endswith(":make_problem.<locals>.definition")
 

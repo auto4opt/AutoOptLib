@@ -21,7 +21,10 @@ def _predict(model: Any, data: Any):
     if model is None:
         raise ValueError("Surrogate model is required for prediction")
     if hasattr(model, "predict"):
-        return model.predict(data)
+        features = np.asarray(data)
+        if features.ndim == 1:
+            features = features.reshape(1, -1)
+        return model.predict(features)
     raise AttributeError("Surrogate model lacks a predict method")
 
 

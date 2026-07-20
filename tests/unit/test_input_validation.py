@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 from autooptlib.utils.general.input import (
@@ -66,6 +67,8 @@ def test_option_helpers_cover_aliases_and_container_forms():
     assert _ensure_namespace(Setting()).x == 2
     assert _find_argument([], "x") == (False, None)
     assert _find_argument(["y", 1], "x") == (False, None)
+    arguments = ["features", np.zeros(4), "AlgN", 3]
+    assert _find_argument(arguments, "AlgN") == (True, 3)
     with pytest.raises(ValueError, match="Missing value"):
         _find_argument(["x"], "x")
 
@@ -101,6 +104,7 @@ def test_input_handler_data_and_defaults():
     assert design_defaults.AlgN == 10
     assert design_defaults.AlgFE == 5000
     assert design_defaults.AlgRuns == 5
+    assert design_defaults.ALDesMode == "single"
     assert design_defaults.RacingK == 1
     assert design_defaults.Surro == 1500
     with pytest.raises(ValueError, match="Unsupported mode"):
@@ -130,6 +134,7 @@ def test_input_handler_data_and_defaults():
             "not necessary",
         ),
         ({"Compare": "statistic", "AlgRuns": 1}, "run the design multiple"),
+        ({"ALDesMode": "unknown"}, "ALDesMode"),
     ],
 )
 def test_design_validation_rejects_invalid_combinations(overrides, message):

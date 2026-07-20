@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use AutoOptLib, please cite this software and the accompanying paper."
 title: "AutoOptLib"
 type: software
-version: 1.2.0
+version: 1.3.0
 date-released: 2026-07-19
 license: Apache-2.0
 repository-code: "https://github.com/auto4opt/AutoOptLib"

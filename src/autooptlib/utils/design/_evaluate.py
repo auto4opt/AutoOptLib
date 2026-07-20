@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any, List, Sequence
 
 import numpy as np
@@ -52,6 +53,43 @@ def _update_sequential(problem, data, best_solution):
     return problem, data
 
 
+def _select_initial_population(
+    populations: Any,
+    instance_index: int,
+    run: int,
+    *,
+    instance_count: int,
+    runs: int,
+) -> np.ndarray | None:
+    """Select an optional ``(population, dimension)`` matrix for one run."""
+
+    if populations is None:
+        return None
+    if isinstance(populations, Mapping):
+        if instance_index not in populations:
+            return None
+        selected = np.asarray(populations[instance_index])
+        if selected.ndim == 2:
+            return selected
+        if selected.ndim == 3:
+            return selected[run % selected.shape[0]]
+        raise ValueError(
+            "Each InitialPopulations mapping value must have shape (N,D) or (runs,N,D)."
+        )
+    array = np.asarray(populations)
+    if array.ndim == 2:
+        return array
+    if array.ndim == 3:
+        if array.shape[0] == instance_count and instance_count != runs:
+            return array[instance_index]
+        return array[run % array.shape[0]]
+    if array.ndim == 4:
+        return array[instance_index, run % array.shape[1]]
+    raise ValueError(
+        "InitialPopulations must have shape (N,D), (runs,N,D), or (instances,runs,N,D)."
+    )
+
+
 def evaluate(self, problem: Any, data: Any, setting: Any, seed_instance: Sequence[int]):
     if not self.operator_pheno:
         return self
@@ -65,6 +103,7 @@ def evaluate(self, problem: Any, data: Any, setting: Any, seed_instance: Sequenc
     evaluate_mode = get_flex(setting, "evaluate", "exact")
     metric = get_flex(setting, "metric", "quality")
     runs = int(get_flex(setting, "alg_runs", 1))
+    initial_populations = get_flex(setting, "InitialPopulations", None)
 
     max_seed = max(seed_instance) if seed_instance else 0
     rows_needed = max_seed + 1
@@ -90,8 +129,26 @@ def evaluate(self, problem: Any, data: Any, setting: Any, seed_instance: Sequenc
         )
 
         for run in range(runs):
+            initial_population = _select_initial_population(
+                initial_populations,
+                seed,
+                run,
+                instance_count=len(problems),
+                runs=runs,
+            )
             if mode == "static":
-                result = run_design(pathways, params, problem_obj, data_obj, setting)
+                had_initial = hasattr(setting, "_InitialPopulation")
+                previous_initial = getattr(setting, "_InitialPopulation", None)
+                setting._InitialPopulation = initial_population
+                try:
+                    result = run_design(
+                        pathways, params, problem_obj, data_obj, setting
+                    )
+                finally:
+                    if had_initial:
+                        setting._InitialPopulation = previous_initial
+                    else:
+                        delattr(setting, "_InitialPopulation")
                 fit_history = result["fit_history"]
                 evaluations = result["evaluations"]
                 elapsed = result["elapsed"]
@@ -119,47 +176,61 @@ def evaluate(self, problem: Any, data: Any, setting: Any, seed_instance: Sequenc
                 elapsed = 0.0
                 curr_prob = problem_obj
                 curr_data = data_obj
-                while getattr(curr_data, "continue", False):
-                    # The MATLAB sequential protocol allocates the configured
-                    # ProbFE budget independently to every arriving stage.
-                    stage_setting = setting
-                    result = run_design(
-                        pathways, params, curr_prob, curr_data, stage_setting
-                    )
-                    fit_history = result["fit_history"]
-                    best_solution = result["best_solution"]
-                    evaluations += result["evaluations"]
-                    elapsed += result["elapsed"]
-                    if metric == "quality":
-                        cumulative += float(fit_history[-1]) if fit_history else np.inf
-                    elif metric in {"runtimeFE", "runtimeSec"}:
-                        cumulative += (
-                            result["elapsed"]
-                            if metric == "runtimeSec"
-                            else result["evaluations"]
+                had_initial = hasattr(setting, "_InitialPopulation")
+                previous_initial = getattr(setting, "_InitialPopulation", None)
+                stage_initial = initial_population
+                try:
+                    while getattr(curr_data, "continue", False):
+                        # The MATLAB sequential protocol allocates the configured
+                        # ProbFE budget independently to every arriving stage.
+                        setting._InitialPopulation = stage_initial
+                        result = run_design(
+                            pathways, params, curr_prob, curr_data, setting
                         )
-                    elif metric == "auc":
-                        cumulative += _auc_score(
-                            fit_history,
-                            get_flex(setting, "Tmax", None),
-                            get_flex(setting, "Thres", None),
-                            int(
-                                get_flex(
-                                    curr_prob,
-                                    "N",
-                                    get_flex(setting, "ProbN", 1),
-                                )
-                            ),
+                        stage_initial = None
+                        fit_history = result["fit_history"]
+                        best_solution = result["best_solution"]
+                        evaluations += result["evaluations"]
+                        elapsed += result["elapsed"]
+                        if metric == "quality":
+                            cumulative += (
+                                float(fit_history[-1]) if fit_history else np.inf
+                            )
+                        elif metric in {"runtimeFE", "runtimeSec"}:
+                            cumulative += (
+                                result["elapsed"]
+                                if metric == "runtimeSec"
+                                else result["evaluations"]
+                            )
+                        elif metric == "auc":
+                            cumulative += _auc_score(
+                                fit_history,
+                                get_flex(setting, "Tmax", None),
+                                get_flex(setting, "Thres", None),
+                                int(
+                                    get_flex(
+                                        curr_prob,
+                                        "N",
+                                        get_flex(setting, "ProbN", 1),
+                                    )
+                                ),
+                            )
+                        else:
+                            cumulative += (
+                                float(fit_history[-1]) if fit_history else np.inf
+                            )
+                        if best_solution is None:
+                            break
+                        curr_prob, curr_data = _update_sequential(
+                            curr_prob, curr_data, best_solution
                         )
+                        if curr_prob is problem_obj and curr_data is data_obj:
+                            break
+                finally:
+                    if had_initial:
+                        setting._InitialPopulation = previous_initial
                     else:
-                        cumulative += float(fit_history[-1]) if fit_history else np.inf
-                    if best_solution is None:
-                        break
-                    curr_prob, curr_data = _update_sequential(
-                        curr_prob, curr_data, best_solution
-                    )
-                    if curr_prob is problem_obj and curr_data is data_obj:
-                        break
+                        delattr(setting, "_InitialPopulation")
                 if metric == "runtimeFE":
                     target[seed, run] = evaluations
                 elif metric == "runtimeSec":

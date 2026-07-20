@@ -33,7 +33,7 @@ def cross_point_uniform(*args):
         offspring = np.vstack([off1, off2])
         return offspring[:n, :], aux
     if mode == "parameter":
-        return [0, 0.5], None
+        return [0.05, 0.5], None
     if mode == "behavior":
         return [["LS", "small"], ["GS", "large"]], None
     raise ValueError(f"Unsupported mode: {mode}")

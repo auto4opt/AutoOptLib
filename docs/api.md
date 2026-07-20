@@ -33,6 +33,16 @@ Common options:
 - `CheckpointDir`: optional Solve or Design checkpoint directory.
 - `CheckpointEvery`: generations or candidate evaluations between atomic writes.
 - `Resume`: resume matching completed or interrupted checkpoints.
+- `Designer`: `search` (default) or `aldes` in design mode.
+- `ALDesModel`: trained `ALDesGenerator` or checkpoint path.
+- `ALDesMode`: `single` (default, no problem features) or `continual`.
+- `ALDesFeatures`: target-problem feature vector or `.npy` path, required only
+  in continual mode and rejected in single-problem mode.
+- `ALDesInitialPopulations`: optional sampled populations or `.npy`/`.npz`
+  path reused across candidate algorithms and runs.
+- `ALDesCandidates`: number of generated candidates; must be at least `AlgN`.
+- `ALDesTemperature`: positive sampling temperature (default `1.0`).
+- `ALDesGreedy`: use grammar-constrained greedy decoding (default `False`).
 
 The mode-specific defaults match the reference MATLAB package: Design uses
 `AlgQ=4`, `ProbN=20`, `ProbFE=5000`, `InnerFE=500`, `AlgN=10`, `AlgFE=5000`,
@@ -45,6 +55,30 @@ Design returns `(algorithms, trace)`. Solve returns
 `(best_solutions, histories)`. Design also evaluates the final `AlgN`
 algorithms on held-out instances after the `AlgFE` search budget.
 Every completed call also writes `experiment.json` to `OutputDir`.
+
+## `autooptlib.aldes`
+
+The optional ALDes API exposes `validate_sequence`, `allowed_next_tokens`,
+`decode_sequence`, `AutoOptEvaluator`, `EvaluationConfig`, and
+`make_pbo_problem` without importing PyTorch. Single-problem generators do not
+use landscape features. Continual generators opt in with
+`GeneratorConfig(condition_on_features=True)` and can use
+`extract_pbo_features` to obtain paper-style random-walk features and reusable
+initial populations. `ALDesGenerator`, `PPOTrainer`, and
+`ElasticWeightConsolidation` load PyTorch lazily and require
+`pip install "autooptlib[aldes]"`.
+
+`EvaluationConfig(initial_populations=...)` accepts `(N,D)`, `(runs,N,D)`,
+`(instances,runs,N,D)`, or an instance-index mapping. Candidate batches reuse
+the same initial random stream so their ranking is independent of enumeration
+order.
+
+`evaluate_pbo_actions(..., workers=None)` evaluates unique ALDes candidates
+in a persistent CPU process pool, automatically bounded by the number of
+logical CPU cores. Pass `workers=1` for serial execution or a positive integer
+for an explicit limit. Neural-network tensors remain on their configured
+PyTorch accelerator; only token sequences and CPU evaluation data cross the
+process boundary.
 
 ## `make_problem(...)`
 
