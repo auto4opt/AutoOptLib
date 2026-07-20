@@ -86,9 +86,7 @@ class ALDesGenerator(nn.Module):
             encoding[:, 1::2] = torch.cos(positions * scale[: dimension // 2])
         return encoding
 
-    def _features(
-        self, features: torch.Tensor | None, batch_size: int
-    ) -> torch.Tensor:
+    def _features(self, features: torch.Tensor | None, batch_size: int) -> torch.Tensor:
         if not self.config.condition_on_features or self.feature_projection is None:
             raise RuntimeError("This generator is not configured for problem features.")
         if features is None:

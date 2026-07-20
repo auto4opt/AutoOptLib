@@ -74,8 +74,7 @@ def _select_initial_population(
         if selected.ndim == 3:
             return selected[run % selected.shape[0]]
         raise ValueError(
-            "Each InitialPopulations mapping value must have shape (N,D) "
-            "or (runs,N,D)."
+            "Each InitialPopulations mapping value must have shape (N,D) or (runs,N,D)."
         )
     array = np.asarray(populations)
     if array.ndim == 2:
@@ -87,8 +86,7 @@ def _select_initial_population(
     if array.ndim == 4:
         return array[instance_index, run % array.shape[1]]
     raise ValueError(
-        "InitialPopulations must have shape (N,D), (runs,N,D), or "
-        "(instances,runs,N,D)."
+        "InitialPopulations must have shape (N,D), (runs,N,D), or (instances,runs,N,D)."
     )
 
 

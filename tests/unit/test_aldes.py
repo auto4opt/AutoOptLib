@@ -53,9 +53,7 @@ def test_aldes_sequence_validation_and_masks():
     with pytest.raises(SequenceValidationError, match="more than once"):
         validate_sequence([17, 0, 29, 8, 29, 8, 29, 12, 29, 18])
     with pytest.raises(SequenceValidationError, match="global search"):
-        validate_sequence(
-            [17, 0, 29, 11, 29, 4, 29, 8, 29, 12, 29, 18]
-        )
+        validate_sequence([17, 0, 29, 11, 29, 4, 29, 8, 29, 12, 29, 18])
     with pytest.raises(SequenceValidationError, match="crossover"):
         validate_sequence([17, 0, 29, 4, 29, 12, 29, 18])
 
@@ -93,12 +91,18 @@ def test_aldes_mask_enforces_global_search_and_distinct_fork_modes():
 
 
 def test_aldes_fork_has_exactly_one_executable_search_step():
-    assert np.flatnonzero(
-        allowed_next_tokens([17, 0, 31, 21, 11, 29])
-    ).tolist() == [12, 13, 14, 15, 16]
-    assert np.flatnonzero(
-        allowed_next_tokens([17, 0, 31, 21, 4, 29])
-    ).tolist() == [8, 9, 10]
+    assert np.flatnonzero(allowed_next_tokens([17, 0, 31, 21, 11, 29])).tolist() == [
+        12,
+        13,
+        14,
+        15,
+        16,
+    ]
+    assert np.flatnonzero(allowed_next_tokens([17, 0, 31, 21, 4, 29])).tolist() == [
+        8,
+        9,
+        10,
+    ]
     assert np.flatnonzero(
         allowed_next_tokens([17, 0, 31, 21, 4, 29, 8, 29])
     ).tolist() == [12, 13, 14, 15, 16]
@@ -249,9 +253,7 @@ def test_aldes_feature_conditioning_is_opt_in():
     import autooptlib.aldes as aldes
 
     single = aldes.ALDesGenerator(
-        aldes.GeneratorConfig(
-            layers=1, feedforward_dim=64, dropout=0.0, max_length=50
-        )
+        aldes.GeneratorConfig(layers=1, feedforward_dim=64, dropout=0.0, max_length=50)
     )
     with pytest.raises(ValueError, match="does not accept"):
         single.generate(torch.zeros(32))
@@ -320,8 +322,12 @@ def test_aldes_evaluator_reuses_initial_populations_and_candidate_streams():
         name="recording_onemax",
     )
     initial = np.asarray(
-        [[0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0],
-         [1, 1, 0, 0, 0, 0], [1, 1, 1, 0, 0, 0]],
+        [
+            [0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0, 0],
+            [1, 1, 0, 0, 0, 0],
+            [1, 1, 1, 0, 0, 0],
+        ],
         dtype=int,
     )
     evaluator = AutoOptEvaluator(
@@ -342,16 +348,12 @@ def test_aldes_evaluator_reuses_initial_populations_and_candidate_streams():
     first = AutoOptEvaluator(
         _binary_problem(),
         [6],
-        config=EvaluationConfig(
-            population_size=4, evaluations=12, runs=1, seed=19
-        ),
+        config=EvaluationConfig(population_size=4, evaluations=12, runs=1, seed=19),
     )
     second = AutoOptEvaluator(
         _binary_problem(),
         [6],
-        config=EvaluationConfig(
-            population_size=4, evaluations=12, runs=1, seed=19
-        ),
+        config=EvaluationConfig(population_size=4, evaluations=12, runs=1, seed=19),
     )
     _, forward = first.evaluate_many([SIMPLE_SEQUENCE, sequence_b])
     _, reverse = second.evaluate_many([sequence_b, SIMPLE_SEQUENCE])

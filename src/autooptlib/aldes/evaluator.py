@@ -180,9 +180,7 @@ def _resolve_evaluation_workers(requested: int | None, jobs: int) -> int:
                 "ALDES_EVAL_WORKERS must be 'auto' or a positive integer."
             ) from exc
         if count <= 0:
-            raise ValueError(
-                "ALDES_EVAL_WORKERS must be 'auto' or a positive integer."
-            )
+            raise ValueError("ALDES_EVAL_WORKERS must be 'auto' or a positive integer.")
     return max(1, min(count, jobs))
 
 

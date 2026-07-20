@@ -320,9 +320,7 @@ def allowed_next_tokens(prefix: Sequence[int] | np.ndarray) -> np.ndarray:
                 mask[list(PARAMETER_INDICES[:5])] = True
             elif last.name == "fork":
                 mask[list(_FORK_PARAMETER_INDICES)] = True
-            elif (
-                last.index in _PARAMETERIZED_GLOBAL_SEARCH and has_global_search
-            ):
+            elif last.index in _PARAMETERIZED_GLOBAL_SEARCH and has_global_search:
                 mask[list(PARAMETER_INDICES[:3])] = True
             else:
                 mask[list(PARAMETER_INDICES)] = True

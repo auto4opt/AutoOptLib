@@ -61,9 +61,7 @@ def _feature_mapping(
         values.update(calculate_information_content(frame, objectives, seed=seed))
         values.update(calculate_ela_meta(frame, objectives))
         values.update(calculate_nbc(frame, objectives))
-        values.update(
-            calculate_dispersion(frame, objectives, dist_method="hamming")
-        )
+        values.update(calculate_dispersion(frame, objectives, dist_method="hamming"))
     result: dict[str, float] = {}
     for name, value in values.items():
         # Runtime measurements are machine-dependent and are not landscape
@@ -120,9 +118,7 @@ def extract_pbo_features(
     for _ in range(trials):
         trial_seed = int(root.integers(0, np.iinfo(np.int32).max))
         trial_rng = np.random.default_rng(trial_seed)
-        decisions = _binary_random_walk(
-            dimension, sample_factor * dimension, trial_rng
-        )
+        decisions = _binary_random_walk(dimension, sample_factor * dimension, trial_rng)
         objectives = np.asarray(problem(decisions), dtype=float).reshape(-1)
         mappings.append(_feature_mapping(decisions, objectives, seed=trial_seed))
         samples.append(decisions)

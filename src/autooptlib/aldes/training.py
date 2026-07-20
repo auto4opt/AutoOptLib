@@ -96,10 +96,8 @@ class PPOTrainer:
 
     def _anneal_learning_rate(self) -> float:
         progress = min(self.steps / self.config.anneal_steps, 1.0)
-        learning_rate = (
-            self.config.learning_rate
-            + progress
-            * (self.config.final_learning_rate - self.config.learning_rate)
+        learning_rate = self.config.learning_rate + progress * (
+            self.config.final_learning_rate - self.config.learning_rate
         )
         for group in self.optimizer.param_groups:
             group["lr"] = learning_rate
@@ -127,7 +125,9 @@ class PPOTrainer:
             sequences = [row.cpu().numpy() for row in generated.sequences]
             costs_array = np.asarray(evaluate(sequences), dtype=float).reshape(-1)
             if costs_array.shape[0] != self.config.candidates:
-                raise ValueError("Evaluator returned one cost per candidate incorrectly.")
+                raise ValueError(
+                    "Evaluator returned one cost per candidate incorrectly."
+                )
             costs = torch.as_tensor(
                 costs_array,
                 dtype=old_log_probability.dtype,
