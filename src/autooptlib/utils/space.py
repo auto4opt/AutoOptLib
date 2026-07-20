@@ -143,6 +143,7 @@ def space(problem: Any, setting: Any) -> SimpleNamespace:
             "cross_point_uniform",
             "cross_point_n",
             "search_reset_one",
+            "search_reset_n",
             "search_reset_rand",
             "reinit_discrete",
         ]

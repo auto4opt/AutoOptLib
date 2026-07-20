@@ -2,6 +2,44 @@
 
 All notable changes to AutoOptLib are documented here.
 
+## 1.3.0 - 2026-07-19
+
+### Added
+
+- Integrated ALDes as an optional learning-based design backend with an
+  ALDes-compatible 32-token vocabulary, a deliberately constrained grammar,
+  an autoregressive PyTorch generator, PPO trainer, and EWC
+  continual-learning penalty.
+- Added a pure-Python ALDes sequence codec and evaluator that execute generated
+  algorithms through the common AutoOptLib pathway engine.
+- Added an optional IOH PBO problem adapter and the missing `search_reset_n`
+  component required by the ALDes vocabulary.
+- Added `Designer="aldes"` to the high-level `autoopt` workflow, including
+  checkpoint loading, problem features, candidate count, temperature, and
+  greedy-decoding controls.
+
+### Changed
+
+- Corrected discrete uniform-crossover and random-reset parameter bounds to
+  match the reference implementation.
+- Defined one consistent multi-path rule: a fork follows choose, every branch
+  evaluates one search row (a crossover may include a paired mutation), and
+  the branches merge before a shared population update. ALDes no longer
+  generates unused later search rows.
+- Made single-problem ALDes design the default with no landscape-feature
+  extraction or input. Continual design explicitly enables problem-feature
+  conditioning and paper-style random-walk feature extraction.
+- Matched the paper's 5,000-FE training budget, deterministic PPO likelihood
+  calculation, 100-step learning-rate annealing, and EWC weight of 200.
+- Made candidate evaluation order-independent through common random streams
+  and added reuse of feature-sampling solutions as initial populations.
+- Added deterministic candidate-level CPU multiprocessing for ALDes PBO
+  evaluation, including duplicate-sequence caching and persistent workers.
+- Made option lookup safe when an earlier option value is a NumPy array, which
+  is required for in-memory ALDes problem features.
+- Kept PyTorch, IOH, pflacco, pandas, and scikit-learn behind the optional
+  `autooptlib[aldes]` dependency group.
+
 ## 1.2.0 - 2026-07-19
 
 ### Added

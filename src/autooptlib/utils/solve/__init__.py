@@ -613,7 +613,22 @@ def _init_population(
 ) -> SolutionSet:
     ptype = get_problem_type(problem) or "continuous"
     pop_n = int(get_flex(problem, "N", get_flex(setting, "ProbN", 10)))
-    if ptype == "continuous":
+    supplied = get_flex(setting, "_InitialPopulation", None)
+    if supplied is not None:
+        decs = np.asarray(supplied)
+        if decs.ndim != 2:
+            raise ValueError("Each supplied initial population must be a 2-D array.")
+        dimension = np.asarray(get_flex(problem, "bound")).shape[-1]
+        if decs.shape[1] != dimension:
+            raise ValueError(
+                "Supplied initial-population dimension does not match the problem."
+            )
+        if decs.shape[0] < pop_n:
+            raise ValueError(
+                "A supplied initial population must contain at least ProbN rows."
+            )
+        decs = np.array(decs[:pop_n], copy=True)
+    elif ptype == "continuous":
         bound = np.asarray(get_flex(problem, "bound"), dtype=float)
         lower = bound[0]
         upper = bound[1]
@@ -824,65 +839,58 @@ def _execute_path(
     generation: int,
     remaining_evaluations: int,
 ) -> Tuple[List[Any], Any, int]:
+    """Execute one branch of a MATLAB-style multi-path algorithm.
+
+    Each branch evaluates only its first search row on every outer generation.
+    A crossover's paired mutation belongs to that row and is executed as its
+    secondary operator. Later search rows and the serial-path termination loop
+    are intentionally ignored in this mode.
+    """
+
     if not isinstance(aux_state, dict):
         aux_state = {}
     aux_state.setdefault("rng", ensure_rng(setting))
-    current_parent = subset
-    evals = 0
-    for step_idx, step in enumerate(path.search):
-        if evals >= remaining_evaluations:
-            break
-        improve = None
-        inner_g = 1
-        limit = int(step.termination[1]) if step.termination.size > 1 else 1
-        threshold = float(step.termination[0]) if step.termination.size > 0 else -np.inf
-        primary_param = params.search[step_idx].primary if params.search else None
-        secondary_param = params.search[step_idx].secondary if params.search else None
-        while (improve is None or improve[0] >= threshold) and inner_g <= limit:
-            remaining = remaining_evaluations - evals
-            if remaining <= 0:
-                break
-            primary_fn = get_component(step.primary)
-            new_dec, aux_state = primary_fn(
-                current_parent,
-                problem,
-                primary_param,
-                aux_state,
-                generation,
-                inner_g,
-                data,
-                "execute",
-            )
-            if step.secondary:
-                new_dec = repair_sol(np.asarray(new_dec), problem)
-                secondary_fn = get_component(step.secondary)
-                new_dec, aux_state = secondary_fn(
-                    new_dec,
-                    problem,
-                    secondary_param,
-                    aux_state,
-                    generation,
-                    inner_g,
-                    data,
-                    "execute",
-                )
-            new_dec = np.asarray(new_dec)
-            if new_dec.ndim == 1:
-                new_dec = new_dec.reshape(1, -1)
-            if new_dec.shape[0] > remaining:
-                new_dec = new_dec[:remaining]
-            new = make_solutions(new_dec, problem, data)
-            if step.primary == "search_cma":
-                aux_state = get_component("para_cma")(
-                    new, problem, aux_state, "solution"
-                )
-            elif step.primary == "search_pso":
-                aux_state = get_component("para_pso")(new, problem, aux_state)
-            current_parent = new
-            evals += len(new)
-            improve = improve_rate(new, improve, inner_g, "solution")
-            inner_g += 1
-    return list(current_parent), aux_state, evals
+    if not path.search or remaining_evaluations <= 0:
+        return [], aux_state, 0
+
+    step = path.search[0]
+    primary_param = params.search[0].primary if params.search else None
+    secondary_param = params.search[0].secondary if params.search else None
+    primary_fn = get_component(step.primary)
+    new_dec, aux_state = primary_fn(
+        subset,
+        problem,
+        primary_param,
+        aux_state,
+        generation,
+        generation,
+        data,
+        "execute",
+    )
+    if step.secondary:
+        new_dec = repair_sol(np.asarray(new_dec), problem)
+        secondary_fn = get_component(step.secondary)
+        new_dec, aux_state = secondary_fn(
+            new_dec,
+            problem,
+            secondary_param,
+            aux_state,
+            generation,
+            generation,
+            data,
+            "execute",
+        )
+    decisions = np.asarray(new_dec)
+    if decisions.ndim == 1:
+        decisions = decisions.reshape(1, -1)
+    if decisions.shape[0] > remaining_evaluations:
+        decisions = decisions[:remaining_evaluations]
+    new = make_solutions(decisions, problem, data)
+    if step.primary == "search_cma":
+        aux_state = get_component("para_cma")(new, problem, aux_state, "solution")
+    elif step.primary == "search_pso":
+        aux_state = get_component("para_pso")(new, problem, aux_state)
+    return list(new), aux_state, len(new)
 
 
 def run_design(

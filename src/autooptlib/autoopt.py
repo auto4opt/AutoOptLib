@@ -66,12 +66,25 @@ def autoopt(**kwargs: Any):
     problem_callable = _load_problem_callable(problem_descriptor)
 
     if setting.Mode.lower() == "design":
-        final_algs, alg_trace = process(
-            problem_callable,
-            instance_train,
-            instance_test,
-            setting=setting,
-        )
+        designer = str(getattr(setting, "Designer", "search")).lower()
+        if designer == "search":
+            final_algs, alg_trace = process(
+                problem_callable,
+                instance_train,
+                instance_test,
+                setting=setting,
+            )
+        elif designer == "aldes":
+            from .aldes.workflow import design_with_aldes
+
+            final_algs, alg_trace = design_with_aldes(
+                problem_callable,
+                instance_train,
+                instance_test,
+                setting=setting,
+            )
+        else:
+            raise ValueError("Designer must be 'search' or 'aldes'.")
         output(
             final_algs,
             alg_trace,

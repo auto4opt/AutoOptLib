@@ -208,14 +208,26 @@ def test_serial_path_updates_population_after_each_search_step(monkeypatch):
     assert result["evaluations"] == 6
 
 
-def test_parallel_path_helper_repairs_secondary_and_truncates(monkeypatch):
+def test_parallel_path_helper_executes_first_search_pair_only(monkeypatch):
+    calls = []
+
     def primary(parent, *args):
+        calls.append("primary")
         return parent.decs() + 2.0, args[2]
 
     def secondary(parent, *args):
+        calls.append("secondary")
         return np.asarray(parent) + 1.0, args[2]
 
-    components = {"primary_test": primary, "secondary_test": secondary}
+    def later(parent, *args):
+        calls.append("later")
+        return parent.decs() + 10.0, args[2]
+
+    components = {
+        "primary_test": primary,
+        "secondary_test": secondary,
+        "later_test": later,
+    }
     original_get_component = solve_module.get_component
 
     def lookup_component(name):
@@ -229,9 +241,10 @@ def test_parallel_path_helper_repairs_secondary_and_truncates(monkeypatch):
         [
             SearchStep(
                 "primary_test",
-                np.array([-np.inf, 1.0]),
+                np.array([-np.inf, 5.0]),
                 "secondary_test",
-            )
+            ),
+            SearchStep("later_test", np.array([-np.inf, 5.0])),
         ],
         "update_greedy",
         [],
@@ -257,6 +270,7 @@ def test_parallel_path_helper_repairs_secondary_and_truncates(monkeypatch):
     assert evaluations == 1
     assert len(produced) == 1
     assert len(aux) == 1
+    assert calls == ["primary", "secondary"]
 
 
 def test_solve_helper_normalization_and_algorithm_errors(tmp_path):

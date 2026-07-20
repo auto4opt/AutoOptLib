@@ -42,6 +42,7 @@ _COMPONENT_MODULES = {
     "reinit_discrete": "reinit_discrete",
     "reinit_permutation": "reinit_permutation",
     "search_reset_one": "search_reset_one",
+    "search_reset_n": "search_reset_n",
     "search_reset_rand": "search_reset_rand",
     "search_reset_creep": "search_reset_creep",
     "search_swap": "search_swap",

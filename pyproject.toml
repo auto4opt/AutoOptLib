@@ -62,6 +62,13 @@ applications = [
 surrogate = [
   "scikit-learn>=1.2,<2",
 ]
+aldes = [
+  "torch>=2.1,<3",
+  "ioh>=0.3.14,<1",
+  "pandas>=2,<4",
+  "pflacco>=1.2,<2",
+  "scikit-learn>=1.2,<2",
+]
 
 [project.urls]
 Homepage = "https://github.com/auto4opt/AutoOptLib"
