@@ -1,0 +1,53 @@
+{
+  "schema": "autooptlib.experiment-sources",
+  "schema_version": 1,
+  "resolved_utc": "2026-07-21T00:00:00Z",
+  "sources": {
+    "iohexperimenter": {
+      "repository": "https://github.com/IOHprofiler/IOHexperimenter.git",
+      "commit": "c812d6cc1e04d338e32cc7c3f6d89298d3a5c323",
+      "python_requirement": "ioh>=0.3.18,<1",
+      "role": "official BBOB and PBO objective implementations"
+    },
+    "pycma": {
+      "repository": "https://github.com/CMA-ES/pycma.git",
+      "commit": "e3afb80a129a9bb25c44b2bc5c275f731fb6dfb2",
+      "source_file": "cma/evolution_strategy.py",
+      "source_file_sha256": "be28f22877aace05b3a1da2ed8ccde25b76c34d0ff7a9ad206b802270f6b1d2e",
+      "python_requirement": "cma==4.4.4",
+      "role": "author-maintained BIPOP-CMA-ES implementation"
+    },
+    "shade": {
+      "repository": "https://ryojitanabe.github.io/publication",
+      "source_archive": "https://ryojitanabe.github.io/code/SHADE1.1.1_CEC2014_c%2B%2B.zip",
+      "source_archive_sha256": "12d444a5b37d8e2c0a00514713b4584bd4aa00fa4d154d0227e381f874e13491",
+      "shade_cc_sha256": "87836651b263e512e6ec0ecdd81fd157bd33f78aa13028eee9e91f04f806e758",
+      "search_algorithm_cc_sha256": "42b57db090b830087497cde30f6b79c06bda90b38b941e5b3954e050ff16e4a4",
+      "version": "SHADE 1.1.1",
+      "role": "faithful Python port of the corrected author release with the registered common population override; equations and defaults are recorded in comparisons/manual/algorithms.py"
+    },
+    "paradiseo": {
+      "repository": "https://github.com/nojhan/paradiseo.git",
+      "commit": "3259d1b452e4d6625300bea694e933cf12bfffd4",
+      "role": "official eoFastGA and algorithm foundry"
+    },
+    "irace": {
+      "repository": "https://github.com/MLopez-Ibanez/irace.git",
+      "commit": "60148ab2aa39e469dc26242f4c30bc84be9d5f39",
+      "version": "4.4.3",
+      "role": "official ParadisEO configurator"
+    },
+    "sparkle": {
+      "repository": "https://github.com/ADA-research/Sparkle.git",
+      "commit": "63a6536b9235af00a76a08844ba7ecd621e66e76",
+      "version": "0.9.6",
+      "role": "official algorithm-configuration platform"
+    },
+    "smac3": {
+      "repository": "https://github.com/automl/SMAC3.git",
+      "commit": "ce7927d46e753df55bee1ad2e134235175bbb134",
+      "version": "2.3.1",
+      "role": "official Sparkle configurator"
+    }
+  }
+}

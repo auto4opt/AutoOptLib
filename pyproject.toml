@@ -33,7 +33,9 @@ classifiers = [
   "Topic :: Scientific/Engineering",
 ]
 dependencies = [
+  "cloudpickle>=3,<4",
   "numpy>=1.23,<3",
+  "threadpoolctl>=3,<4",
 ]
 
 [project.optional-dependencies]
@@ -59,49 +61,55 @@ docs = [
 applications = [
   "scipy>=1.10,<2",
 ]
-surrogate = [
-  "scikit-learn>=1.2,<2",
-]
-aldes = [
+learning = [
   "torch>=2.1,<3",
-  "ioh>=0.3.14,<1",
+]
+experiments = [
+  "cma==4.4.4",
+  "ioh>=0.3.18,<1",
   "pandas>=2,<4",
-  "pflacco>=1.2,<2",
-  "scikit-learn>=1.2,<2",
+  "psutil>=5.9,<8",
+  "scipy>=1.10,<2",
+  "torch>=2.1,<3",
 ]
 
 [project.urls]
 Homepage = "https://github.com/auto4opt/AutoOptLib"
-Documentation = "https://autooptlib.readthedocs.io/"
 Repository = "https://github.com/auto4opt/AutoOptLib"
 Issues = "https://github.com/auto4opt/AutoOptLib/issues"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+include-package-data = false
+package-dir = {"autooptlib" = "methods/autooptlib"}
 
 [tool.setuptools.packages.find]
-where = ["src"]
-include = ["autooptlib*"]
+where = [".", "methods"]
+include = ["autooptlib*", "methods*", "problems*", "comparisons*"]
+exclude = ["methods.autooptlib*", "comparisons.other_designs*"]
+namespaces = false
 
 [tool.setuptools.package-data]
-"autooptlib.problems.data" = ["*.npz", "README.md"]
+"problems.data" = ["*.npz", "README.md"]
+"comparisons" = ["sources.lock.json"]
+"comparisons.shared" = ["patches/*", "native/*.json", "native/*.cpp", "native/*.hpp", "native/*.txt"]
 
 [tool.setuptools.dynamic]
 version = { attr = "autooptlib._version.__version__" }
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
-testpaths = ["tests"]
+testpaths = ["experiments/tests"]
+cache_dir = "/tmp/autooptlib-pytest-cache"
 
 [tool.mypy]
 python_version = "3.9"
 files = [
-  "src/autooptlib/serialization.py",
-  "src/autooptlib/problems/base.py",
-  "src/autooptlib/applications",
-  "src/autooptlib/utils/general/input.py",
-  "src/autooptlib/utils/general/process.py",
-  "src/autooptlib/utils/solve/__init__.py",
+  "methods/autooptlib/serialization.py",
+  "problems/base.py",
+  "problems/applications",
+  "methods/autooptlib/utils/general/input.py",
+  "methods/autooptlib/utils/general/process.py",
+  "methods/autooptlib/utils/solve/__init__.py",
 ]
 follow_imports = "skip"
 ignore_missing_imports = true
@@ -109,11 +117,15 @@ check_untyped_defs = true
 show_error_codes = true
 
 [tool.coverage.run]
-omit = ["src/autooptlib/aldes/*"]
+omit = [
+  "methods/autooptlib/learning/*",
+]
 
 [tool.ruff]
 target-version = "py39"
 line-length = 88
+extend-exclude = ["results", "experiments/.local"]
+cache-dir = "/tmp/autooptlib-ruff-cache"
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I"]

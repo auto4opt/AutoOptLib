@@ -1,0 +1,16 @@
+{
+  "schema": "autooptlib.eofastga-config",
+  "schema_version": 1,
+  "configuration": {
+    "crossover_rate": 0.8,
+    "crossover_selector": 0,
+    "crossover": 0,
+    "aftercross_selector": 0,
+    "mutation_rate": 0.8,
+    "mutation_selector": 0,
+    "mutation": 0,
+    "replacement": 0,
+    "population_size": 20,
+    "offspring_size": 20
+  }
+}

@@ -1,34 +1,37 @@
-# Byte-compiled / interpreter cache
+# Generated Python/build/test files
 __pycache__/
 *.py[cod]
-*.pyo
-
-# Python packaging / build artifacts
 *.egg-info/
 build/
 dist/
-
-# Virtual environments
-.venv/
-venv/
-env/
-
-# Testing / coverage outputs
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
 .coverage
 htmlcov/
-docs/_build/
 
-# IDE and editor settings
+# Keep environments and temporary execution outputs outside the repository
+.venv*/
+venv/
+env/
+smoke_outputs/
+ConstraintViolation.csv
+Fitness.csv
+Fitness_all_runs.csv
+Solutions.csv
+Solutions.pkl
+experiment.json
+
+# Local configuration and editor/OS files
+experiments/.local/
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# Generated experiment artifacts
-smoke_outputs/
-benchmarks/results/*/f*_d*/
-
-# Miscellaneous OS files
-Thumbs.db
 .DS_Store
+Thumbs.db
+
+# Local research material excluded from the public release
+/experiments/
+/results/
+/comparisons/other_designs/
