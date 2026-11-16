@@ -1,0 +1,23 @@
+name: Software tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install '.[test]'
+      - run: python -c "from autooptlib.runtime._native import _native_stream, _native_compatibility"
+      - run: python -m pytest -q
+      - run: python examples/design_and_solve.py --output /tmp/autooptlib-python
+      - run: python examples/design_and_solve.py --native --output /tmp/autooptlib-native

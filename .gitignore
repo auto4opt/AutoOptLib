@@ -1,37 +1,30 @@
-# Generated Python/build/test files
 __pycache__/
 *.py[cod]
+*.so
+*.dylib
+*.pyd
 *.egg-info/
 build/
 dist/
+.venv*/
+venv/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
 .coverage
 htmlcov/
-
-# Keep environments and temporary execution outputs outside the repository
-.venv*/
-venv/
-env/
-smoke_outputs/
+.DS_Store
+.vscode/
+.idea/
+/outputs/
+/results/
+/experiments/
+/comparisons/
+/manuscript/
+/tmp/
 ConstraintViolation.csv
 Fitness.csv
 Fitness_all_runs.csv
 Solutions.csv
 Solutions.pkl
 experiment.json
-
-# Local configuration and editor/OS files
-experiments/.local/
-.vscode/
-.idea/
-*.swp
-*.swo
-.DS_Store
-Thumbs.db
-
-# Local research material excluded from the public release
-/experiments/
-/results/
-/comparisons/other_designs/

@@ -1,77 +1,32 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel", "pybind11>=2.12,<4", "numpy>=1.23,<3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "autooptlib"
 dynamic = ["version"]
-description = "Component-based automated design of metaheuristic optimizers"
+description = "Automated metaheuristic design with executable algorithm graphs"
 readme = "README.md"
 requires-python = ">=3.9"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-authors = [
-  { name = "Qi Zhao", email = "zhaoq@sustech.edu.cn" },
-  { name = "Swarm Intelligence Lab" },
-]
-keywords = [
-  "automated algorithm design",
-  "metaheuristics",
-  "optimization",
-  "evolutionary computation",
-]
+authors = [{ name = "Qi Zhao", email = "zhaoq@sustech.edu.cn" }, { name = "Swarm Intelligence Lab" }]
+keywords = ["automated algorithm design", "metaheuristics", "optimization", "evolutionary computation"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering",
 ]
-dependencies = [
-  "cloudpickle>=3,<4",
-  "numpy>=1.23,<3",
-  "threadpoolctl>=3,<4",
-]
+dependencies = ["cloudpickle>=3,<4", "numpy>=1.23,<3", "threadpoolctl>=3,<4"]
 
 [project.optional-dependencies]
-test = [
-  "pytest>=7.4",
-  "pytest-cov>=4.1",
-]
-dev = [
-  "build>=1.2",
-  "pytest>=7.4",
-  "pytest-cov>=4.1",
-  "sphinx>=7.2,<9",
-  "sphinx-rtd-theme>=2,<4",
-  "myst-parser>=2,<5",
-  "mypy>=1.10,<2",
-  "ruff>=0.9,<1",
-]
-docs = [
-  "sphinx>=7.2,<9",
-  "sphinx-rtd-theme>=2,<4",
-  "myst-parser>=2,<5",
-]
-applications = [
-  "scipy>=1.10,<2",
-]
-learning = [
-  "torch>=2.1,<3",
-]
-experiments = [
-  "cma==4.4.4",
-  "ioh>=0.3.18,<1",
-  "pandas>=2,<4",
-  "psutil>=5.9,<8",
-  "scipy>=1.10,<2",
-  "torch>=2.1,<3",
-]
+cpu = ["numba>=0.60,<1"]
+applications = ["scipy>=1.10,<2"]
+benchmarks = ["ioh>=0.3.18,<1"]
+test = ["pytest>=7.4", "scipy>=1.10,<2"]
+dev = ["build>=1.2", "pytest>=7.4", "scipy>=1.10,<2", "ruff>=0.9,<1"]
 
 [project.urls]
 Homepage = "https://github.com/auto4opt/AutoOptLib"
@@ -80,52 +35,26 @@ Issues = "https://github.com/auto4opt/AutoOptLib/issues"
 
 [tool.setuptools]
 include-package-data = false
-package-dir = {"autooptlib" = "methods/autooptlib"}
+package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
-where = [".", "methods"]
-include = ["autooptlib*", "methods*", "problems*", "comparisons*"]
-exclude = ["methods.autooptlib*", "comparisons.other_designs*"]
+where = ["src"]
+include = ["autooptlib*"]
 namespaces = false
 
 [tool.setuptools.package-data]
-"problems.data" = ["*.npz", "README.md"]
-"comparisons" = ["sources.lock.json"]
-"comparisons.shared" = ["patches/*", "native/*.json", "native/*.cpp", "native/*.hpp", "native/*.txt"]
+"autooptlib.runtime._native" = ["*.cpp", "*.hpp", "NUMPY_LICENSE.txt"]
 
 [tool.setuptools.dynamic]
 version = { attr = "autooptlib._version.__version__" }
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
-testpaths = ["experiments/tests"]
-cache_dir = "/tmp/autooptlib-pytest-cache"
-
-[tool.mypy]
-python_version = "3.9"
-files = [
-  "methods/autooptlib/serialization.py",
-  "problems/base.py",
-  "problems/applications",
-  "methods/autooptlib/utils/general/input.py",
-  "methods/autooptlib/utils/general/process.py",
-  "methods/autooptlib/utils/solve/__init__.py",
-]
-follow_imports = "skip"
-ignore_missing_imports = true
-check_untyped_defs = true
-show_error_codes = true
-
-[tool.coverage.run]
-omit = [
-  "methods/autooptlib/learning/*",
-]
+testpaths = ["tests"]
 
 [tool.ruff]
 target-version = "py39"
 line-length = 88
-extend-exclude = ["results", "experiments/.local"]
-cache-dir = "/tmp/autooptlib-ruff-cache"
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I"]
+select = ["E4", "E7", "E9", "F"]
