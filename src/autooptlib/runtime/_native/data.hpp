@@ -3,6 +3,7 @@
 // policy is replaced.
 #pragma once
 #include "profile.hpp"
+#include "constraint_order.hpp"
 #include "execution_services.hpp"
 #include "array_workspace.hpp"
 #include "native_interval.hpp"
@@ -807,7 +808,7 @@ struct NativeData {
       auto result = results[i];
       double obj = py::cast<double>(result[0]),
              con = py::cast<double>(result[1]);
-      double fit = con <= 0. ? obj : con + 1e8;
+      double fit = native_components::fitness_value(obj, con);
       evaluated.append(
           solution_type(evaluated_decisions[i], obj, con, fit, result[2]));
     }

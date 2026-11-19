@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 from autooptlib.components import _utils
-from autooptlib.components.archive_best import _extract_fits, archive_best
+from autooptlib.components.archive_best import archive_best
 from autooptlib.components.archive_diversity import archive_diversity
 from autooptlib.components.archive_statistic import archive_statistic
 from autooptlib.components.archive_tabu import archive_tabu
@@ -48,19 +48,18 @@ def test_best_archive_fitness_fallbacks_and_errors():
     class WithFits:
         fits = np.array([2.0, 1.0])
 
-    np.testing.assert_array_equal(_extract_fits(WithFits()), [2.0, 1.0])
+    np.testing.assert_array_equal(_utils.extract_fits(WithFits()), [2.0, 1.0])
     items = [
-        Item(np.array([0]), obj=3.0, con=None),
-        Item(np.array([1]), obj=1.0, con=[0.0]),
+        Item(np.array([0]), obj=3e8, con=None),
+        Item(np.array([1]), obj=2e8, con=[0.0]),
         Item(np.array([2]), obj=0.0, con=[2.0]),
     ]
-    np.testing.assert_array_equal(_extract_fits(items), [3.0, 1.0, 100000002.0])
     archive, _ = archive_best(items, [items[0]], "execute")
     assert archive[-1] is items[1]
-    with pytest.raises(ValueError, match="expose fits"):
-        _extract_fits(1)
-    with pytest.raises(ValueError, match="lacks fit"):
-        _extract_fits([SimpleNamespace()])
+    with pytest.raises(ValueError, match="fitness information"):
+        archive_best(1, [], "execute")
+    with pytest.raises(ValueError, match="must expose"):
+        archive_best([SimpleNamespace()], [], "execute")
 
 
 def test_diversity_archive_empty_and_discrete_distance():

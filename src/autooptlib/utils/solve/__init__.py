@@ -37,6 +37,11 @@ from ...runtime.lifecycle import (
     initialize_evaluation_session,
 )
 from ...runtime.resources import discover_cpu_topology
+from .._constraint_order import (
+    CONSTRAINT_ORDER_REVISION,
+    objective_score,
+    solution_key,
+)
 from ..design._helpers import (
     _same_optional_array,
     ensure_rng,
@@ -968,6 +973,7 @@ def _solve_checkpoint_signature(
     }
     payload = {
         "implementation": "solve-checkpoint-audit2",
+        "constraint_order": CONSTRAINT_ORDER_REVISION,
         "stream_implementation": (
             STREAM_IMPLEMENTATION_REVISION
             if any(isinstance(pathway, StreamPathway) for pathway in pathways)
@@ -1134,7 +1140,7 @@ def make_solutions(decs: np.ndarray, problem: Any, data: Any) -> SolutionSet:
     items: List[Solution] = []
     for d, (obj, con, acc) in zip(repaired, results):
         feasible = con <= 0.0
-        fit = obj if feasible else (con + 1e8)
+        fit = obj if feasible else con
         items.append(Solution(dec=d, obj=obj, con=con, fit=fit, acc=acc))
     return SolutionSet(items)
 
@@ -1410,7 +1416,7 @@ def _execute_single_path(
                 aux_state.setdefault("rng", ensure_rng(setting))
             aux_state.pop("_active_search_operator", None)
             if len(updated) != len(current):
-                updated = sorted(updated, key=lambda solution: solution.fit)[
+                updated = sorted(updated, key=solution_key)[
                     : len(current)
                 ]
             current = SolutionSet(updated)
@@ -1419,7 +1425,7 @@ def _execute_single_path(
             improve = improve_rate(current, improve, inner_generation, "solution")
             archives = _update_archives(current, archive_names, archives, problem)
             if len(current):
-                iteration_bests.append(min(list(current), key=lambda sol: sol.fit))
+                iteration_bests.append(min(list(current), key=solution_key))
             inner_generation += 1
 
     return current, aux_state, evaluations, iterations, archives, iteration_bests
@@ -2027,7 +2033,7 @@ def _execute_stream_generation(
         )
     if not offspring or interrupted:
         iteration_best = (
-            [min([*observed, *list(solutions)], key=lambda solution: solution.fit)]
+            [min([*observed, *list(solutions)], key=solution_key)]
             if observed
             else []
         )
@@ -2057,7 +2063,7 @@ def _execute_stream_generation(
         completed_offspring.extend((path_index, item) for item in produced)
     if interrupted:
         iteration_best = (
-            [min([*observed, *list(solutions)], key=lambda solution: solution.fit)]
+            [min([*observed, *list(solutions)], key=solution_key)]
             if observed
             else []
         )
@@ -2124,10 +2130,10 @@ def _execute_stream_generation(
                 )
             for target_index, child in zip(targets, path_children):
                 index = int(target_index)
-                if child.fit < pbest[index].fit:
+                if solution_key(child) < solution_key(pbest[index]):
                     pbest[index] = child
             stage_state["Pbest"] = SolutionSet(pbest)
-            stage_state["Gbest"] = min(pbest, key=lambda item: item.fit)
+            stage_state["Gbest"] = min(pbest, key=solution_key)
             stage_states[stage_index] = stage_state
         path_state["_stream_stage_aux"] = stage_states
     if native_execution is not None and native_execution.native_updates:
@@ -2195,14 +2201,14 @@ def _execute_stream_generation(
                 aux_cache[path_index] = update_aux
                 aux_cache[path_index].setdefault("rng", rng)
             if len(updated) != len(current):
-                updated = sorted(updated, key=lambda solution: solution.fit)[: len(current)]
+                updated = sorted(updated, key=solution_key)[: len(current)]
             current = SolutionSet(updated)
     if native_execution is not None:
         native_execution.engine.boundary("archives-entry", generation)
     archives = _update_archives(current, archive_names, archives, problem)
     if native_execution is not None:
         native_execution.engine.boundary("archives-commit", generation)
-    best = min([*observed, *list(current)], key=lambda solution: solution.fit)
+    best = min([*observed, *list(current)], key=solution_key)
     return current, aux_cache, evaluations, archives, [best], attempts
 
 
@@ -2528,7 +2534,7 @@ def _run_design(
         )
         if resume_state.get("complete", False):
             candidates = [item for item in history if item is not None]
-            best = min(candidates, key=lambda item: item.fit) if candidates else None
+            best = min(candidates, key=solution_key) if candidates else None
             return {
                 "solutions": solutions,
                 "history": history,
@@ -2546,9 +2552,9 @@ def _run_design(
 
     if not history:
         if len(solutions):
-            initial_best = min(list(solutions), key=lambda s: s.fit)
+            initial_best = min(list(solutions), key=solution_key)
             history.append(initial_best)
-            fit_history.append(float(initial_best.fit))
+            fit_history.append(objective_score(initial_best))
         else:
             history.append(None)
             fit_history.append(np.inf)
@@ -2583,11 +2589,10 @@ def _run_design(
         ):
             termination_reason = "stream_event_budget_exhausted"
             break
-        if metric == "quality" and fit_history[-1] <= threshold:
+        target_met = np.isfinite(fit_history[-1]) and fit_history[-1] <= threshold
+        if metric == "quality" and target_met:
             break
-        if metric == "runtimeFE" and (
-            evaluations >= Tmax or fit_history[-1] <= threshold
-        ):
+        if metric == "runtimeFE" and (evaluations >= Tmax or target_met):
             break
         if metric == "runtimeSec" and elapsed_seconds >= Tmax:
             break
@@ -2637,11 +2642,11 @@ def _run_design(
                 previous = history[-1]
                 best_so_far = (
                     current_best
-                    if previous is None or current_best.fit < previous.fit
+                    if previous is None or solution_key(current_best) < solution_key(previous)
                     else previous
                 )
                 history.append(best_so_far)
-                fit_history.append(float(best_so_far.fit))
+                fit_history.append(objective_score(best_so_far))
             if evals == 0:
                 if not iteration_bests:
                     break
@@ -2695,11 +2700,11 @@ def _run_design(
                 previous = history[-1]
                 best_so_far = (
                     current_best
-                    if previous is None or current_best.fit < previous.fit
+                    if previous is None or solution_key(current_best) < solution_key(previous)
                     else previous
                 )
                 history.append(best_so_far)
-                fit_history.append(float(best_so_far.fit))
+                fit_history.append(objective_score(best_so_far))
             if evals == 0:
                 break
         else:
@@ -2795,20 +2800,20 @@ def _run_design(
                 "execute",
             )
             if len(updated) != len(solutions):
-                updated = sorted(updated, key=lambda solution: solution.fit)[
+                updated = sorted(updated, key=solution_key)[
                     : len(solutions)
                 ]
             solutions = SolutionSet(updated)
             archives = _update_archives(solutions, archive_names, archives, problem)
-            current_best = min(list(solutions), key=lambda sol: sol.fit)
+            current_best = min(list(solutions), key=solution_key)
             previous = history[-1]
             best_so_far = (
                 current_best
-                if previous is None or current_best.fit < previous.fit
+                if previous is None or solution_key(current_best) < solution_key(previous)
                 else previous
             )
             history.append(best_so_far)
-            fit_history.append(float(best_so_far.fit))
+            fit_history.append(objective_score(best_so_far))
 
         if metric == "runtimeFE":
             pass
@@ -2839,7 +2844,7 @@ def _run_design(
             )
 
     candidates = [item for item in history if item is not None]
-    final_solution = min(candidates, key=lambda item: item.fit) if candidates else None
+    final_solution = min(candidates, key=solution_key) if candidates else None
 
     if checkpoint_path is not None:
         _write_checkpoint(
@@ -3010,7 +3015,8 @@ def _auc_score(
     )
     indices = np.ceil(np.maximum(0.0, times - initial) / offspring).astype(int)
     indices = np.clip(indices, 0, history.size - 1)
-    success_fraction = float(np.mean(history[indices] <= targets))
+    scores = history[indices]
+    success_fraction = float(np.mean(np.isfinite(scores) & (scores <= targets)))
     return float(1.0 / (success_fraction + np.finfo(float).eps))
 
 
@@ -3158,7 +3164,7 @@ def _run_solve_task(
             setting,
             offspring_size,
             population_size,
-            float(resolved.fit),
+            objective_score(resolved),
         )
         return idx, run, mode, history, resolved, score
 
@@ -3238,7 +3244,7 @@ def _run_solve_task(
             setting,
             offspring_size,
             population_size,
-            float(best.fit),
+            objective_score(best),
         )
         if sequence_path is not None:
             _write_checkpoint(

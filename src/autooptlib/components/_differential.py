@@ -3,8 +3,15 @@ from functools import partial
 
 import numpy as np
 
-from ._execution import Computation, Primitive, NativePattern
-from ._utils import decision_matrix, ensure_rng, input_boundary, population_matrix, rng_method
+from ._execution import Computation, NativePattern, Primitive
+from ._utils import (
+    decision_matrix,
+    ensure_rng,
+    extract_fits,
+    input_boundary,
+    population_matrix,
+    rng_method,
+)
 
 
 def prepare(args, best=False):
@@ -17,10 +24,7 @@ def prepare(args, best=False):
         context = aux.get("_population_context") if isinstance(aux, dict) else None
         population_obj = parent if context is None else context
         fits = getattr(population_obj, "fits", None)
-        if callable(fits):
-            fit_vals = np.asarray(fits()).reshape(-1)
-        else:
-            fit_vals = np.asarray(fits if fits is not None else getattr(population_obj, "fit", None)).reshape(-1)
+        fit_vals = extract_fits(population_obj)
         best_idx = int(np.argmin(fit_vals))
         best_dec = getattr(population_obj[best_idx], "dec", None)
         if callable(best_dec):

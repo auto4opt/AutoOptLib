@@ -41,6 +41,8 @@ struct NativeOperators {
   }
   static bool fitness(const PopulationView &view, std::vector<double> &values) {
     for (auto item : view.sources) {
+      if (py::cast<double>(py::getattr(item, "con", py::float_(0.))) > 0.)
+        return false;  // The ordinary component ranks the full context by feasibility.
       auto f = item.attr("fit");
       if (!PyFloat_Check(f.ptr()))
         return false;

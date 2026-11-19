@@ -15,6 +15,7 @@ import numpy as np
 
 from ..._version import __version__
 from ...serialization import save_algorithm
+from .._constraint_order import solution_key
 from ..design import Design
 
 
@@ -337,14 +338,14 @@ def _output_solve(
         fit_row = [inst]
         con_row = [inst]
         best_iteration = None
-        best_value = float("inf")
+        best_value = (True, float("inf"))
         for iter_idx in range(num_iterations):
             sol = all_solutions[idx][iter_idx]
             best_row.append(json.dumps(np.asarray(sol.dec).tolist()))
             fit_row.append(sol.fit)
             con_row.append(sol.con)
-            if sol.fit < best_value:
-                best_value = sol.fit
+            if solution_key(sol) < best_value:
+                best_value = solution_key(sol)
                 best_iteration = sol
         if best_iteration is not None:
             best_row.insert(1, json.dumps(np.asarray(best_iteration.dec).tolist()))

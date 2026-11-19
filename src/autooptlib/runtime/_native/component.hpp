@@ -42,10 +42,15 @@ inline py::object flex_field(py::handle object,const char *key,py::object fallba
   }
   return fallback;
 }
+inline double total_violation(py::handle item) {
+  auto value = field(item, "con");
+  return value.is_none() ? 0. : py::cast<double>(value);
+}
+inline auto record_fitness_key(py::handle item) {
+  return feasibility_key(py::cast<double>(field(item, "fit")), total_violation(item));
+}
 inline bool less_fitness(py::handle a,py::handle b) {
-  auto left=field(a,"fit"),right=field(b,"fit");
-  int value=PyObject_RichCompareBool(left.ptr(),right.ptr(),Py_LT);
-  if(value<0)throw py::error_already_set();return value!=0;
+  return record_fitness_key(a) < record_fitness_key(b);
 }
 inline py::list records(py::handle source) {
   auto items=field(source,"_items");
@@ -127,19 +132,25 @@ struct DecisionRows {
     return row(i)[j];
   }
 };
-inline py::array_t<double> fitness(py::handle source) {
+inline FitnessValues fitness_values(py::handle source) {
   if((population_storage_type&&PyObject_TypeCheck(source.ptr(),population_storage_type))||!field(source,"_batch_X").is_none()) {
     auto value=field(source,"_batch_F");
     if(value.is_none())throw py::value_error("Batch component requires evaluated fitness");
-    return py::array_t<double,py::array::c_style>::ensure(value);
+    auto violations=field(source,"constraints");
+    return {
+        py::array_t<double,py::array::c_style>::ensure(value),
+        violations.is_none() ? py::reinterpret_borrow<py::array_t<double>>(py::none()) :
+            py::array_t<double>(py::array_t<double,py::array::c_style>::ensure(violations)),
+    };
   }
-  auto items=records(source);py::array_t<double> result(items.size());
+  auto items=records(source);py::array_t<double> result(items.size()), violations(items.size());
   for(size_t i=0;i<items.size();++i) {
     auto value=field(items[i],"fit");
     if(value.is_none())throw py::type_error("Native component records require scalar fit");
     result.mutable_data()[i]=py::cast<double>(value);
+    violations.mutable_data()[i]=total_violation(items[i]);
   }
-  return result;
+  return {result, violations};
 }
 inline py::list select_records(py::handle source,py::array_t<int64_t> indices) {
   auto items=records(source);py::list selected;
@@ -247,12 +258,21 @@ struct Component {
     if(metadata.op==Operation::archive_tabu)return state_result(source,py::none());
     bool batch=bool(call.population)||(population_storage_type&&PyObject_TypeCheck(source.ptr(),population_storage_type))||!field(source,"_batch_X").is_none();
     auto source_matrix=[&](bool integer=false){return call.population?matrix(call.population->dense(),integer):matrix(source,integer);};
-    auto source_fitness=[&](){if(call.population){if(!call.population->evaluated)throw py::value_error("Batch component requires evaluated fitness");return call.population->fitness();}return fitness(source);};
+    auto source_values=[&](){
+      if(call.population){
+        if(!call.population->evaluated)throw py::value_error("Batch component requires evaluated fitness");
+        return call.population->fitness_values();
+      }
+      return fitness_values(source);
+    };
+    auto source_fitness=[&](){return source_values().selection_scores();};
     if(metadata.op==Operation::para_pso) {
       if(!state.contains("Pbest"))return state;
       if(batch) {
         auto personal_owner=state.population("Pbest");
-        auto personal=personal_owner?personal_owner->fitness():fitness(state.object("Pbest")),current=source_fitness();
+        auto [personal,current]=shared_selection_scores(
+            personal_owner?personal_owner->fitness_values():fitness_values(state.object("Pbest")),
+            source_values());
         auto n=personal.size();py::array_t<int64_t> indices(n);py::array_t<double> chosen(n);
         for(py::ssize_t i=0;i<n;++i){indices.mutable_data()[i]=i;chosen.mutable_data()[i]=personal.data()[i];}
         auto raw_targets=state.index_array("_batch_pso_targets");
@@ -275,7 +295,7 @@ struct Component {
       auto count=std::min(personal.size(),current.size());
       for(size_t i=0;i<personal.size();++i)next.append(i<count&&less_fitness(current[i],personal[i])?current[i]:personal[i]);
       state.set("Pbest",solution_set(solution_type,next));
-      auto f=fitness(state.object("Pbest"));
+      auto f=fitness_values(state.object("Pbest")).selection_scores();
       auto best=PyArray_ArgMin(reinterpret_cast<PyArrayObject *>(f.ptr()),AOL_RAVEL_AXIS,nullptr);
       if(!best)throw py::error_already_set();auto index=py::cast<int64_t>(py::reinterpret_steal<py::object>(best));
       state.set("Gbest",next[index]);return state;
@@ -290,7 +310,7 @@ struct Component {
     }
     if(metadata.op==Operation::archive_best||metadata.op==Operation::archive_statistic) {
       if(metadata.op==Operation::archive_statistic) {
-        auto f=source_fitness();
+        auto f=source_values().values;
         auto previous=call.problem;auto old=py::reinterpret_borrow<py::array_t<double,py::array::c_style>>(py::handle());
         if(previous.is_none()||(PyList_CheckExact(previous.ptr())&&PyList_GET_SIZE(previous.ptr())==0))old=py::array_t<double>(std::vector<py::ssize_t>{0,2});
         else old=py::array_t<double,py::array::c_style|py::array::forcecast>::ensure(previous);
@@ -303,10 +323,7 @@ struct Component {
         py::array_t<int64_t> index(1);index.mutable_data()[0]=py::cast<int64_t>(py::reinterpret_steal<py::object>(raw));
         return state_result(index,py::none());
       }
-      py::list values;for(auto item:records(source))values.append(field(item,"fit"));
-      auto dtype=field(source,"_items").is_none()?PyArray_DescrFromType(NPY_DOUBLE):nullptr;
-      auto array_raw=PyArray_FromAny(values.ptr(),dtype,1,1,NPY_ARRAY_CARRAY_RO,nullptr);
-      if(!array_raw)throw py::error_already_set();auto f=py::reinterpret_steal<py::array>(array_raw);
+      auto f=source_fitness();
       auto raw=PyArray_ArgMin(reinterpret_cast<PyArrayObject *>(f.ptr()),AOL_RAVEL_AXIS,nullptr);
       if(!raw)throw py::error_already_set();auto best=py::cast<int64_t>(py::reinterpret_steal<py::object>(raw));
       auto previous=call.problem;py::list result;
@@ -384,10 +401,10 @@ struct Component {
     }
     if(metadata.update) {
       if(batch) {
-        auto f=source_fitness();auto size=f.size();
+        auto values=source_values();auto f=values.selection_scores();auto size=f.size();
         bool full_default=metadata.op==Operation::update_always||metadata.op==Operation::update_greedy||metadata.op==Operation::update_round_robin||metadata.op==Operation::update_iterated_local_search;
         auto n=py::cast<int64_t>(flex_field(problem,"N",py::int_(full_default?size:size/2)));
-        return replacement(name,f,n,rng,parameter(0,.5),generation,maximum,state,math->exponential);
+        return replacement(name,f,n,rng,parameter(0,.5),generation,maximum,state,math->exponential,values);
       }
       auto items=records(source);auto size=items.size();
       bool full_default=metadata.op==Operation::update_always||metadata.op==Operation::update_greedy||metadata.op==Operation::update_round_robin||metadata.op==Operation::update_iterated_local_search;
@@ -401,8 +418,8 @@ struct Component {
         }
         return state_result(selected,py::none());
       }
-      auto f=source_fitness();
-      auto result=replacement(name,f,n,rng,parameter(0,.5),generation,maximum,state,math->exponential);
+      auto values=source_values();auto f=values.selection_scores();
+      auto result=replacement(name,f,n,rng,parameter(0,.5),generation,maximum,state,math->exponential,values);
       result.value=select_records(source,py::cast<py::array_t<int64_t>>(result.value));return result;
     }
     auto decision_source=call.population&&call.indexed_inputs?py::object(py::none()):call.population?py::object(call.population->dense()):batch?field(source,"_batch_X"):source;
@@ -509,8 +526,14 @@ struct Component {
       auto unused=py::reinterpret_borrow<py::array_t<double>>(py::handle());
       std::optional<DecisionRows> population_rows;
       if(native_context)population_rows.emplace(native_context,call.indexed_inputs);else if(has_context)population_rows.emplace(model);
-      auto model_fitness=needs_fitness?(native_context?native_context->fitness():has_context?fitness(model):source_fitness()):unused;
-      auto selected_fitness=needs_fitness?source_fitness():unused;
+      auto model_fitness=unused,selected_fitness=unused;
+      if(needs_fitness) {
+        auto selected=source_values();
+        if(has_context) {
+          auto context_values=native_context?native_context->fitness_values():fitness_values(model);
+          std::tie(model_fitness,selected_fitness)=shared_selection_scores(context_values,selected);
+        } else model_fitness=selected_fitness=selected.selection_scores();
+      }
       auto run=[&](const auto &rows) {
         if(!needs_fitness) {
           // Match the consumer's exact wrapper type: absent data stays absent,

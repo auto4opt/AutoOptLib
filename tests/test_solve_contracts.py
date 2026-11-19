@@ -7,7 +7,14 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from autooptlib import ObjectiveEvaluationError
+from autooptlib import (
+    AlgorithmGraph,
+    ObjectiveEvaluationError,
+    Operator,
+    Stage,
+    get_component,
+)
+from autooptlib import Pathway as GraphPathway
 from autooptlib.utils.design._helpers import (
     Pathway,
     PathwayParam,
@@ -158,10 +165,80 @@ def test_evaluator_normalizes_result_shapes_and_callable_name():
         )
 
 
-def test_make_solutions_applies_constraint_penalty():
+def test_make_solutions_records_constraint_violation():
     problem = _problem(evaluate=lambda data, decision: (1.0, [2.0], None))
     solution = make_solutions(np.array([[0.0, 0.0]]), problem, None)[0]
-    assert solution.fit == 100000002.0
+    assert (solution.obj, solution.con, solution.fit) == (1.0, 2.0, 2.0)
+
+
+@pytest.mark.parametrize(
+    "backend, stream",
+    [
+        ("python", "python"),
+        ("native", "graph"),
+        ("native", "batch"),
+    ],
+)
+@pytest.mark.parametrize("has_feasible", [True, False])
+def test_solve_prioritizes_feasibility_at_large_objective_scale(
+    backend, stream, has_feasible
+):
+    if backend == "native":
+        from autooptlib.runtime.component_library import load_component_library
+        from autooptlib.runtime.native import load_native
+
+        try:
+            load_component_library()
+            if stream == "graph":
+                load_native()
+        except ImportError as exc:
+            pytest.skip(str(exc))
+
+    def evaluate(_data, decision):
+        x = float(decision[0])
+        return (2e8 + x if x <= 0.0 else -x), [x, -1.0], None
+
+    problem = _problem(bound=[[-1.0], [1.0]], evaluate=evaluate, N=4, Gmax=2)
+    initial = (
+        [[0.8], [0.25], [-0.25], [-0.75]]
+        if has_feasible
+        else [[0.8], [0.25], [0.5], [1.0]]
+    )
+    graph = AlgorithmGraph(
+        pathways=(GraphPathway((Stage(Operator("search_mu_uniform", (0.0,))),)),),
+        population_size=4,
+    ).to_design()
+    result = run_design(
+        graph.operator_pheno[0],
+        graph.parameter_pheno[0],
+        problem,
+        None,
+        SimpleNamespace(
+            ProbN=4,
+            ProbFE=8,
+            Seed=2026,
+            Thres=1e8,
+            _InitialPopulation=initial,
+            ComponentBackend=backend,
+            StreamBackend=stream,
+            rng=np.random.default_rng(2026),
+        ),
+        algorithm_configuration=graph.configuration,
+    )
+    best = result["best_solution"]
+    assert result["evaluations"] == 8
+    if has_feasible:
+        assert best.con == 0.0
+        assert best.obj == 2e8 - 0.75
+        assert result["fit_history"][-1] == best.obj
+        greedy = get_component("update_greedy", native=backend == "native")
+        evaluated = make_solutions(np.asarray(initial), problem, None)
+        survivors, _ = greedy(evaluated, SimpleNamespace(N=2), "execute")
+        assert [candidate.obj for candidate in survivors] == [2e8 - 0.75, 2e8 - 0.25]
+    else:
+        assert best.con == 0.25
+        assert best.obj == -0.25
+        assert np.isposinf(result["fit_history"][-1])
 
 
 def test_problem_repair_hook_arity_is_resolved_without_masking_errors():

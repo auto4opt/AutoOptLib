@@ -6,6 +6,7 @@ from typing import Any, Callable
 
 import numpy as np
 
+from ..utils._constraint_order import solution_key
 from ._utils import ensure_rng, flex_get, solution_as_list
 
 VictimSelector = Callable[[list[Any], np.random.Generator], int]
@@ -72,7 +73,7 @@ def replace_parents_fastga(
 
 
 def worst_victim(parents: list[Any], _rng: np.random.Generator) -> int:
-    return int(np.argmax([float(parent.fit) for parent in parents]))
+    return max(range(len(parents)), key=lambda index: solution_key(parents[index]))
 
 
 def deterministic_tournament_victim(
@@ -80,7 +81,7 @@ def deterministic_tournament_victim(
 ) -> int:
     contestants = rng.integers(0, len(parents), size=2)
     first, second = int(contestants[0]), int(contestants[1])
-    return first if parents[first].fit >= parents[second].fit else second
+    return first if solution_key(parents[first]) >= solution_key(parents[second]) else second
 
 
 def stochastic_tournament_victim(parents: list[Any], rng: np.random.Generator) -> int:
@@ -88,7 +89,7 @@ def stochastic_tournament_victim(parents: list[Any], rng: np.random.Generator) -
     first, second = int(contestants[0]), int(contestants[1])
     worse, better = (
         (first, second)
-        if parents[first].fit >= parents[second].fit
+        if solution_key(parents[first]) >= solution_key(parents[second])
         else (second, first)
     )
     return worse if float(rng.random()) < 0.75 else better

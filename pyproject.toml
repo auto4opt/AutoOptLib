@@ -21,10 +21,14 @@ classifiers = [
 ]
 dependencies = ["cloudpickle>=3,<4", "numpy>=1.23,<3", "threadpoolctl>=3,<4"]
 
+[project.scripts]
+autooptlib-mcp = "autooptlib.mcp_server:main"
+
 [project.optional-dependencies]
 cpu = ["numba>=0.60,<1"]
 applications = ["scipy>=1.10,<2"]
 benchmarks = ["ioh>=0.3.18,<1"]
+mcp = ["ioh>=0.3.18,<1", "matplotlib>=3.7,<4", "mcp>=1.30,<2", "pydantic>=2.11,<3"]
 test = ["pytest>=7.4", "scipy>=1.10,<2"]
 dev = ["build>=1.2", "pytest>=7.4", "scipy>=1.10,<2", "ruff>=0.9,<1"]
 

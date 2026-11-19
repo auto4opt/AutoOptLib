@@ -9,7 +9,6 @@ import numpy as np
 from ..utils.solve import Solution, SolutionSet
 from ._utils import solution_matrix, ensure_rng, flex_get, input_boundary, write_aux, assign_rows, append_aux, rng_method, _input_bindings
 from ._execution import Computation, Primitive, Requirement, NativePattern, DependencyGuard
-from ..runtime.bindings import SelectedRows
 
 _STATE_ZEROS = np.zeros
 _STATE_NUMPY = np

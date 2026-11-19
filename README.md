@@ -1,6 +1,6 @@
 # AutoOptLib
 
-**Version 3.0.0** · Python · Apache License 2.0
+**Version 3.1.0** · Python · Apache License 2.0
 
 AutoOptLib designs metaheuristic optimization algorithms for user-defined problems.
 It represents algorithms as executable graphs, searches their structures, operator
@@ -23,7 +23,7 @@ control-flow graph. See the [programming model](docs/graph-programming-model.md)
 Python 3.9 or later is required. Install this release directly from GitHub:
 
 ```sh
-python -m pip install "git+https://github.com/auto4opt/AutoOptLib.git@v3.0.0"
+python -m pip install "git+https://github.com/auto4opt/AutoOptLib.git@v3.1.0"
 ```
 
 Or clone the repository and install locally:
@@ -42,6 +42,39 @@ successful native build. See [CPU execution](docs/cpu-execution.md).
 Optional dependencies: `.[cpu]` for Numba objective kernels, `.[applications]`
 for MATLAB application-data import, and `.[benchmarks]` for the optional IOH
 problem adapter. No external benchmark implementation is bundled.
+
+## Local MCP
+
+The optional local MCP server lets a compatible client design, run and chart
+algorithms on your computer. It requires Python 3.10 or later. From a fresh
+GitHub checkout, run these commands on macOS or Linux:
+
+```sh
+git clone --branch v3.1.0 https://github.com/auto4opt/AutoOptLib.git
+cd AutoOptLib
+python3 -m venv .venv-mcp
+AUTOOPTLIB_BUILD_NATIVE=0 .venv-mcp/bin/python -m pip install '.[mcp]'
+.venv-mcp/bin/python examples/local_mcp.py
+```
+
+The example starts the MCP server, designs an algorithm on Sphere, and uses
+the resulting JSON to solve a new instance. It prints the objective and the
+local artifact paths. On Windows, use `py -3 -m venv .venv-mcp` and
+`.venv-mcp\Scripts\python.exe` for installation and the example. The server
+command for MCP clients is `.venv-mcp\Scripts\autooptlib-mcp.exe`.
+
+With Codex, register the server and reload the client's MCP configuration:
+
+```sh
+codex mcp add autooptlib -- "$PWD/.venv-mcp/bin/autooptlib-mcp"
+```
+
+Other stdio MCP clients can use the same absolute command path. Try asking
+the model: “Use AutoOptLib to design an optimizer on 10-dimensional Sphere and
+test it on 20-dimensional Sphere.” The [MCP usage guide](docs/local-mcp.md)
+shows how to use BBOB, PBO, custom problems, algorithm graphs, components and
+charts. The [custom problem guide](docs/custom-problems.md) describes the
+default feasibility-first constraint handling.
 
 ## Design an algorithm
 

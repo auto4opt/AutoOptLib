@@ -67,13 +67,13 @@ inline BatchPtr initialize_storage(py::object solve,py::object rng,py::object pr
     }
     std::vector<RowPtr> rows;rows.reserve(result.evaluated.size());
     for(auto &row:result.evaluated)rows.push_back(std::make_shared<BatchRow>(std::move(row.decision),row.objective,row.constraint,
-        row.constraint<=0?row.objective:row.constraint+1e8,std::move(row.auxiliary)));
+        fitness_value(row.objective,row.constraint),std::move(row.auxiliary)));
     return BatchStorage::from_rows(rows,decisions.shape(1),decisions.dtype().num()==NPY_INT64,metrics);
   }
   py::tuple evaluated;
   {RegionScope callback(Region::Callback);evaluated=py::cast<py::tuple>(solve.attr("_evaluate_decisions")(decisions,problem,data));}
   auto inputs=py::cast<py::list>(evaluated[0]),results=py::cast<py::list>(evaluated[1]);std::vector<RowPtr> rows;
-  for(size_t i=0;i<inputs.size();++i){auto r=py::cast<py::tuple>(results[i]);auto o=py::cast<double>(r[0]),c=py::cast<double>(r[1]);rows.push_back(std::make_shared<BatchRow>(py::cast<py::array>(inputs[i]),o,c,c<=0?o:c+1e8,py::reinterpret_borrow<py::object>(r[2])));}
+  for(size_t i=0;i<inputs.size();++i){auto r=py::cast<py::tuple>(results[i]);auto o=py::cast<double>(r[0]),c=py::cast<double>(r[1]);rows.push_back(std::make_shared<BatchRow>(py::cast<py::array>(inputs[i]),o,c,fitness_value(o,c),py::reinterpret_borrow<py::object>(r[2])));}
   return BatchCore::from_rows(rows,decisions.shape(1),decisions.dtype().num()==NPY_INT64,metrics);
 }
 inline py::object initialize_population(py::object solve,py::object rng,py::object problem,py::object data,py::object setting) {
@@ -169,7 +169,7 @@ inline py::dict BatchCore::run_impl(py::dict c) {
   for(auto f:py::cast<py::list>(c["fit_history"]))fits.push_back(py::cast<double>(f));
   if(restored){history=restored->history;fits=restored->fits;}
   current=initial?initial:BatchStorage::from_solutions(solutions);current->metrics=storage_metrics;public_rows=current->rows;
-  if(history.empty()) {auto best=minimum(current->rows);history.push_back(best);fits.push_back(best?best->fit:INFINITY);}
+  if(history.empty()) {auto best=minimum(current->rows);history.push_back(best);fits.push_back(best?objective_score(best->fit,best->constraint):INFINITY);}
   auto clock=c.contains("clock")?py::reinterpret_borrow<py::object>(c["clock"]):py::object(py::none());
   auto now=[&](){return clock.is_none()?std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count():py::cast<double>(clock());};
   auto public_history=[&](){py::list h;for(auto &row:history)h.append(row?row->materialize(solution_type):py::none());return h;};
@@ -211,8 +211,8 @@ inline py::dict BatchCore::run_impl(py::dict c) {
     if(PyErr_CheckSignals()<0)throw py::error_already_set();
     if(loaded_complete||evaluations>=budget)break;
     if(events>=event_limit){reason="stream_event_budget_exhausted";break;}
-    if(metric=="quality"&&fits.back()<=threshold)break;
-    if(metric=="runtimeFE"&&(evaluations>=tmax||fits.back()<=threshold))break;
+    if(metric=="quality"&&std::isfinite(fits.back())&&fits.back()<=threshold)break;
+    if(metric=="runtimeFE"&&(evaluations>=tmax||(std::isfinite(fits.back())&&fits.back()<=threshold)))break;
     if(metric=="runtimeSec"&&elapsed>=tmax)break;
     auto start=metric=="runtimeSec"||!clock.is_none()?now():0.;
     int64_t remaining=budget-evaluations;if(metric=="runtimeFE")remaining=std::min(remaining,static_cast<int64_t>(tmax)-evaluations);
@@ -221,8 +221,8 @@ inline py::dict BatchCore::run_impl(py::dict c) {
     current=result.population;evaluations+=result.used;events+=result.events;
     if(events>=event_limit&&evaluations<budget)reason="stream_event_budget_exhausted";
     if(result.best) {
-      auto previous=history.empty()?nullptr:history.back();if(previous)previous->refresh_record();auto best=(!previous||result.best->fit<previous->fit)?result.best:previous;
-      history.push_back(best);fits.push_back(best->fit);
+      auto previous=history.empty()?nullptr:history.back();if(previous)previous->refresh_record();auto best=(!previous||result.best->key()<previous->key())?result.best:previous;
+      history.push_back(best);fits.push_back(objective_score(best->fit,best->constraint));
     }
     if(result.cancelled) {
       reason="cancelled";

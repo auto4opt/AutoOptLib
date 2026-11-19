@@ -100,7 +100,8 @@ PYBIND11_MODULE(_native_compatibility,m) {
               py::array_t<double,py::array::c_style> fits,py::object generator,
               int64_t count,double parameter,int64_t generation,int64_t maximum,py::dict state) {
     native_components::RandomBoundary b(generator);
-    return native_components::replacement(name,fits,count,b.random,parameter,generation,maximum,native_components::NativeState(state,true),*exponential).python();
+    return native_components::replacement(name,fits,count,b.random,parameter,generation,maximum,native_components::NativeState(state,true),*exponential,
+        native_components::FitnessValues{fits,py::reinterpret_borrow<py::array_t<double>>(py::none())}).python();
   },"name"_a,"fitness"_a,"generator"_a,"count"_a,"parameter"_a=.5,
     "generation"_a=1,"maximum"_a=10,"state"_a=py::dict());
   auto math=std::make_shared<native_components::NativeMath>(numpy,

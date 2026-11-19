@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from ..utils._constraint_order import solution_key
 from ._ssga_update import replace_parents_fastga
 
 
@@ -11,7 +12,7 @@ def _fastga_stochastic_victim(parents: list, rng: np.random.Generator) -> int:
     first = int(rng.integers(0, len(parents)))
     second = int(rng.integers(0, len(parents)))
     return_worse = bool(rng.random() < 0.75)
-    if parents[first].fit > parents[second].fit:
+    if solution_key(parents[first]) > solution_key(parents[second]):
         return first if return_worse else second
     return second if return_worse else first
 

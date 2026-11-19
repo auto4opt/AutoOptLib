@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..utils._constraint_order import solution_key
 from ._utils import flex_get, solution_as_list
 
 
@@ -19,7 +20,7 @@ def update_pairwise(*args):
         # parent survives unless one of its assigned offspring is better.
         for offspring_index, child in enumerate(offspring):
             parent_index = offspring_index % n
-            if child.fit < selected[parent_index].fit:
+            if solution_key(child) < solution_key(selected[parent_index]):
                 selected[parent_index] = child
         return selected, None
 

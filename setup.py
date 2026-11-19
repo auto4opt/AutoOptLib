@@ -38,6 +38,7 @@ setup(
             depends=[
                 "src/autooptlib/runtime/_native/" + name
                 for name in [
+                    "constraint_order.hpp",
                     "data.hpp",
                     "generation.hpp",
                     "operators.hpp",

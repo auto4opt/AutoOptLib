@@ -1,5 +1,4 @@
 #pragma once
-#include "python_compat.hpp"
 #include "batch_storage.hpp"
 #include "batch_access.hpp"
 #include "run_snapshot.hpp"
@@ -62,7 +61,7 @@ struct BatchCore {
     bool known=false;for(auto &type:description_types)known|=Py_TYPE(object.ptr())==reinterpret_cast<PyTypeObject *>(type.ptr());
     if(!known||Py_TYPE(object.ptr())->tp_getattro!=PyObject_GenericGetAttr)return py::object();
     const auto &spelling=description_keys.at(key);
-    auto descriptor=PyDict_GetItem(aol_type_dict(Py_TYPE(object.ptr())),spelling.ptr());
+    auto descriptor=PyDict_GetItem(Py_TYPE(object.ptr())->tp_dict,spelling.ptr());
     if(descriptor&&PyDescr_IsData(descriptor))return py::object();
     auto raw=PyObject_GenericGetDict(object.ptr(),nullptr);if(!raw){PyErr_Clear();return py::object();}
     auto dictionary=py::reinterpret_steal<py::dict>(raw);auto value=PyDict_GetItem(dictionary.ptr(),spelling.ptr());
@@ -159,7 +158,7 @@ struct BatchCore {
   py::object read_description(py::handle owner,const char *key) {
     const auto &spelling=description_keys.at(key);
     for(auto &type:description_types)if(Py_TYPE(owner.ptr())==reinterpret_cast<PyTypeObject *>(type.ptr())) {
-      auto descriptor=PyDict_GetItem(aol_type_dict(Py_TYPE(owner.ptr())),spelling.ptr());
+      auto descriptor=PyDict_GetItem(Py_TYPE(owner.ptr())->tp_dict,spelling.ptr());
       if(Py_TYPE(owner.ptr())->tp_getattro!=PyObject_GenericGetAttr||(descriptor&&PyDescr_IsData(descriptor)))break;
       auto dictionary=PyObject_GenericGetDict(owner.ptr(),nullptr);
       if(dictionary) {
@@ -421,7 +420,7 @@ struct BatchCore {
     used=evaluated.used;interrupted=evaluated.interrupted;
     std::vector<RowPtr> observed;observed.reserve(evaluated.evaluated.size());
     for(auto &row:evaluated.evaluated)observed.push_back(std::make_shared<BatchRow>(
-        std::move(row.decision),row.objective,row.constraint,row.constraint<=0.?row.objective:row.constraint+1e8,std::move(row.auxiliary)));
+        std::move(row.decision),row.objective,row.constraint,fitness_value(row.objective,row.constraint),std::move(row.auxiliary)));
     if(interrupted)return {nullptr,observed};
     std::vector<RowPtr> rows;rows.reserve(evaluated.sources.size());size_t next=0;
     for(auto index:evaluated.sources)rows.push_back(index<0?observed.at(next++):source_rows->at(index));
@@ -432,10 +431,10 @@ struct BatchCore {
     return BatchStorage::from_rows(rows,dimension,empty_integer,std::move(metrics));
   }
   static RowPtr minimum(const std::vector<RowPtr>&rows,RowPtr best=nullptr) {
-    for(auto &row:rows)if(row){row->refresh_record();if(!best||row->fit<best->fit)best=row;}return best;
+    for(auto &row:rows)if(row){row->refresh_record();if(!best||row->key()<best->key())best=row;}return best;
   }
   static RowPtr minimum(BatchPtr batch,RowPtr best=nullptr) {
-    auto f=batch->fitness();for(py::ssize_t i=0;i<batch->size();++i)if(!best||f.data()[i]<best->fit)best=batch->snapshot_row(i);return best;
+    auto values=batch->fitness_values();for(py::ssize_t i=0;i<batch->size();++i)if(!best||values.key(i)<best->key())best=batch->snapshot_row(i);return best;
   }
   std::vector<int64_t> resize(py::handle raw,py::ssize_t n,int64_t required,py::object rng) {
     std::vector<int64_t> values;
@@ -679,7 +678,8 @@ struct BatchCore {
       std::sort(g.rows.begin(),g.rows.end());auto merged=BatchStorage::concatenate({next,children->take(g.rows,audit_hook.is_none())});
       next=component(g.name,merged,problem,g.parameter,state,generation,data,py::none(),nullptr,py::none(),py::none(),bound_paths[g.owner].update.entry).population;pop(state,"_active_search_operator");
       if(next->size()!=parent->size()) {
-        auto raw=PyArray_ArgSort(reinterpret_cast<PyArrayObject *>(next->fitness().ptr()),-1,NPY_QUICKSORT);if(!raw)throw py::error_already_set();
+        auto scores=next->fitness_values().selection_scores();
+        auto raw=PyArray_ArgSort(reinterpret_cast<PyArrayObject *>(scores.ptr()),-1,NPY_QUICKSORT);if(!raw)throw py::error_already_set();
         auto all=py::reinterpret_steal<py::array_t<int64_t>>(raw);std::vector<int64_t> keep(all.data(),all.data()+std::min(parent->size(),all.size()));next=next->take(keep,audit_hook.is_none());
       }
     }

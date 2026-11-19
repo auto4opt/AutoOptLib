@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <variant>
 #include "array_workspace.hpp"
+#include "constraint_order.hpp"
 
 namespace native_components {
 
@@ -20,6 +21,7 @@ struct BatchRow {
   py::object auxiliary=py::none(), record=py::none();
   BatchRow(py::array x,double o,double c,double f,py::object a,py::object r=py::none())
       :decision(std::move(x)),objective(o),constraint(c),fit(f),auxiliary(std::move(a)),record(std::move(r)){}
+  auto key() const { return feasibility_key(fit, constraint); }
   void refresh_record() {
     if(record.is_none())return;
     decision=py::cast<py::array>(field(record,"dec"));objective=py::cast<double>(field(record,"obj"));
@@ -100,6 +102,10 @@ struct BatchStorage {
       objectives=workspace_array<double>(size());constraints=workspace_array<double>(size());
       for(py::ssize_t i=0;i<size();++i){objectives.mutable_data()[i]=rows[i]->population?rows[i]->population->objective:rows[i]->objective;constraints.mutable_data()[i]=rows[i]->population?rows[i]->population->constraint:rows[i]->constraint;}
     }
+  }
+  FitnessValues fitness_values() {
+    ensure_values();
+    return {f, constraints};
   }
   bool private_rows()const {
     if(external||!evaluated)return false;

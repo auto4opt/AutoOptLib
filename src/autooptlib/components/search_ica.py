@@ -6,7 +6,7 @@ from typing import Any, Dict
 
 import numpy as np
 
-from ._utils import ensure_rng, flex_get
+from ._utils import ensure_rng, extract_fits, flex_get
 
 
 def _ensure_aux(aux: Any) -> Dict[str, Any]:
@@ -73,7 +73,7 @@ def search_ica(*args: Any):
         if fits is None:
             fitness = np.zeros(n)
         else:
-            fitness = np.asarray(fits, dtype=float).reshape(-1)
+            fitness = extract_fits(raw_parent)
             if fitness.size != n:
                 raise ValueError(
                     "ICA parent fitness count must match its decision rows."

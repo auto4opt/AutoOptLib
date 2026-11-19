@@ -1,6 +1,7 @@
 #pragma once
 #include "selection.hpp"
 #include "array_workspace.hpp"
+#include "constraint_order.hpp"
 namespace native_components {
 inline py::array_t<int64_t> indices_array(const int64_t *values,size_t count) {
   py::array_t<int64_t> result(count);
@@ -10,7 +11,7 @@ inline py::array_t<int64_t> indices_array(const int64_t *values,size_t count) {
 template<class Exp>
 NativeResult replacement(const std::string &name,py::array_t<double,py::array::c_style> fitness,
                       int64_t n,Random &rng,double initial,int64_t generation,
-                      int64_t maximum,NativeState state,Exp &exponential) {
+                      int64_t maximum,NativeState state,Exp &exponential,const FitnessValues &values) {
   RegionScope numeric_timing(Region::Numeric);
   int64_t size=fitness.size();auto fits=fitness.data();
   ScratchVector<int64_t> result_lease;auto &result=result_lease.values;
@@ -49,12 +50,13 @@ NativeResult replacement(const std::string &name,py::array_t<double,py::array::c
     result.reserve(n);for(int64_t i=0;i<n;++i)result.push_back(i);
     for(int64_t i=n;i<size;++i) {
       if(!n) {PyErr_SetString(PyExc_ZeroDivisionError,"integer modulo by zero");throw py::error_already_set();}
-      auto k=(i-n)%n;double old=fits[result[k]],next=fits[i];
+      auto k=(i-n)%n;
+      auto old=values.key(result[k]),next=values.key(i);
       bool accept=next<old;
-      if(anneal) {
-        double denominator=(std::abs(old)+1e-6)*std::max(temperature,1e-8);
-        double exponent=std::min(std::max((old-next)/denominator,-700.),700.);
-        if(!accept)accept=rng.uniform()<exponential.scalar(exponent);
+      if(anneal && next.first==old.first && !accept) {
+        double denominator=(std::abs(old.second)+1e-6)*std::max(temperature,1e-8);
+        double exponent=std::min(std::max((old.second-next.second)/denominator,-700.),700.);
+        accept=rng.uniform()<exponential.scalar(exponent);
       }
       if(accept)result[k]=i;
     }

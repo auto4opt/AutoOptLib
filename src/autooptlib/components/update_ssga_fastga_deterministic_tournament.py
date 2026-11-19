@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from ..utils._constraint_order import solution_key
 from ._ssga_update import replace_parents_fastga
 
 
@@ -14,7 +15,7 @@ def _distinct_deterministic_victim(parents: list, rng: np.random.Generator) -> i
     second = first
     while second == first:
         second = int(rng.integers(0, len(parents)))
-    return first if parents[first].fit >= parents[second].fit else second
+    return first if solution_key(parents[first]) >= solution_key(parents[second]) else second
 
 
 def update_ssga_fastga_deterministic_tournament(*args):

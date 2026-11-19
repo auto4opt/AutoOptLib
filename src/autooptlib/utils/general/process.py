@@ -19,6 +19,7 @@ from autooptlib.problems.base import validate_constructed_problems
 
 from ...components import get_component
 from ...runtime import DesignEvaluationRuntime
+from .._constraint_order import CONSTRAINT_ORDER_REVISION
 from ..design import Design
 from ..design._helpers import ensure_rng, get_flex
 from ..design._population import (
@@ -493,6 +494,7 @@ def _design_checkpoint_signature(
         settings_payload["DesignFEs"] = int(setting.DesignFEs)
     payload = {
         "implementation": STREAM_IMPLEMENTATION_REVISION,
+        "constraint_order": CONSTRAINT_ORDER_REVISION,
         "problem": _checkpoint_value(problem_descriptor),
         "components": components,
         "settings": settings_payload,

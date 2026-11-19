@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ._utils import ensure_rng, extract_fits, flex_get
+from ._utils import ensure_rng, flex_get, shared_selection_scores
 
 
 def _decisions(parent_obj) -> np.ndarray:
@@ -59,7 +59,7 @@ def search_de_current_to_pbest(*args):
             return targets.copy(), auxiliary
         if targets.shape[1] != dimension:
             raise ValueError("DE targets and population must have the same dimension.")
-        fitness = extract_fits(population_obj)
+        fitness, target_fitness = shared_selection_scores(population_obj, parent_obj)
         if fitness.size != population_size:
             raise ValueError("DE population fitness and decision counts must match.")
         target_indices = None
@@ -91,7 +91,6 @@ def search_de_current_to_pbest(*args):
 
         elite_count = max(1, int(np.ceil(elite_fraction * population_size)))
         elite = np.argsort(fitness, kind="stable")[:elite_count]
-        target_fitness = extract_fits(parent_obj)
         trials = targets.copy()
         for trial_index in range(targets.shape[0]):
             if fastga_match_first:

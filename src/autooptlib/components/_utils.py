@@ -8,6 +8,7 @@ from typing import Any, Sequence
 import numpy as np
 
 from ..utils._attributes import name_variants
+from ..utils._constraint_order import selection_scores, solution_key
 
 _input_bindings = ContextVar("autoopt_input_bindings", default=None)
 
@@ -178,26 +179,45 @@ def finalize_rows(value: np.ndarray, consumer: Any, columns: int) -> np.ndarray:
     return value
 
 
-def extract_fits(solution: Any) -> np.ndarray:
+def _fitness_values(solution: Any) -> tuple[np.ndarray, np.ndarray | None]:
     fits = flex_get(solution, "fits")
     if fits is not None:
-        return np.asarray(fits, dtype=float).reshape(-1)
+        values = np.asarray(fits, dtype=float).reshape(-1)
+        constraints = flex_get(solution, "cons")
+        if constraints is not None:
+            return values, np.asarray(constraints, dtype=float).reshape(-1)
+        if not isinstance(solution, Sequence):
+            return values, None
     if isinstance(solution, Sequence):
-        values = []
+        values, violations = [], []
         for item in solution:
-            val = flex_get(item, "fit")
-            if val is None:
-                val = flex_get(item, "fitness")
-            if val is None:
-                val = flex_get(item, "fits")
-            if val is None:
-                raise ValueError("Each solution must expose fit/fitness value")
-            arr = np.asarray(val)
-            if arr.size != 1:
-                raise ValueError(f"Expected a scalar-like value, got shape={arr.shape}")
-            values.append(float(arr.item()))
-        return np.asarray(values, dtype=float)
+            invalid, score = solution_key(item)
+            values.append(score)
+            violations.append(score if invalid else 0.0)
+        return np.asarray(values), np.asarray(violations)
     raise ValueError("Solution must provide fitness information")
+
+
+def extract_fits(solution: Any) -> np.ndarray:
+    return selection_scores(*_fitness_values(solution))
+
+
+def shared_selection_scores(source: Any, targets: Any) -> tuple[np.ndarray, np.ndarray]:
+    if source is targets:
+        scores = extract_fits(source)
+        return scores, scores
+    values, violations = _fitness_values(source)
+    other, other_violations = _fitness_values(targets)
+    if violations is None and other_violations is None:
+        return values, other
+    scores = selection_scores(
+        np.concatenate((values, other)),
+        np.concatenate((
+            np.zeros_like(values) if violations is None else violations,
+            np.zeros_like(other) if other_violations is None else other_violations,
+        )),
+    )
+    return scores[:values.size], scores[values.size:]
 
 
 def solution_as_list(solution: Any) -> list[Any]:

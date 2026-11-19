@@ -19,14 +19,7 @@ def update_round_robin(*args):
         pop_size = len(sol_list)
         if pop_size == 0:
             return [], None
-        try:
-            fitness = np.fromiter(
-                (float(item.fit) for item in sol_list),
-                dtype=float,
-                count=pop_size,
-            )
-        except (AttributeError, TypeError, ValueError):
-            fitness = extract_fits(solution)
+        fitness = extract_fits(solution)
 
         n = int(flex_get(problem, "N", pop_size))
         n = min(n, pop_size)

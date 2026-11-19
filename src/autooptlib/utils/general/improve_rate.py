@@ -6,22 +6,15 @@ from typing import Any, Sequence
 
 import numpy as np
 
+from .._constraint_order import solution_key
 
-def _fitness_from_solution(solution: Any) -> float:
-    con = getattr(solution, "cons", None)
-    if callable(con):
-        con = con()
-    obj = getattr(solution, "objs", None)
-    if callable(obj):
-        obj = obj()
-    if obj is None:
-        obj = getattr(solution, "obj", None)
-    if con is None:
-        return float(np.asarray(obj).reshape(1)[0])
-    con_sum = float(np.sum(np.maximum(0.0, np.asarray(con))))
-    feasible = con_sum <= 0.0
-    base = float(np.asarray(obj).reshape(1)[0])
-    return base if feasible else (con_sum + 1e8)
+
+class _ImprovementWindow(list):
+    """Keep feasibility alongside numeric values without changing the list API."""
+
+    def __init__(self, values, feasibility):
+        super().__init__(values)
+        self.feasibility = feasibility
 
 
 def improve_rate(
@@ -34,30 +27,34 @@ def improve_rate(
     track the best-so-far fitness over last k iterations.
     """
     k = 3
+    feasibility = list(getattr(improve, "feasibility", [None] * k))
     if inner_g == 1 or improve is None:
         improve = [1.0] + [0.0] * k
+        feasibility = [None] * k
     else:
         improve = list(improve)
         if len(improve) < k + 1:
             improve.extend([0.0] * (k + 1 - len(improve)))
 
+    best_infeasible = None
     if typ == "solution":
-        # support vectorized input or a container with .fits
-        fits = getattr(solution, "fits", None)
-        if callable(fits):
-            fitness = np.asarray(fits()).reshape(-1)
-        elif fits is not None:
-            fitness = np.asarray(fits).reshape(-1)
-        else:
-            # compute fitness from each item
-            try:
-                items = list(solution)
-            except TypeError:
-                items = [solution]
-            fitness = np.asarray(
-                [_fitness_from_solution(it) for it in items], dtype=float
+        try:
+            items = list(solution)
+        except TypeError:
+            items = None
+        if items is not None:
+            best_infeasible, best = min(
+                map(solution_key, items), default=(True, float("inf"))
             )
-        best = float(np.min(fitness)) if fitness.size else float("inf")
+        else:
+            fits = getattr(solution, "fits", None)
+            if fits is None:
+                best_infeasible, best = solution_key(solution)
+            else:
+                if callable(fits):
+                    fits = fits()
+                fitness = np.asarray(fits).reshape(-1)
+                best = float(np.min(fitness)) if fitness.size else float("inf")
     elif typ == "algorithm":
         # expect object exposing avePerformAll or similar
         vals = getattr(solution, "avePerformAll", None)
@@ -71,13 +68,21 @@ def improve_rate(
 
     improve.append(best)
     improve.pop(1)
+    feasibility = [*feasibility[1:], best_infeasible]
 
     if inner_g >= k:
         temp_rate = []
         for i in range(1, k):
             previous = float(improve[i])
             current = float(improve[i + 1])
-            if np.isposinf(previous) and np.isfinite(current):
+            previous_class, current_class = feasibility[i - 1 : i + 1]
+            if (
+                previous_class is not None
+                and current_class is not None
+                and previous_class != current_class
+            ):
+                rate = 1.0 if previous_class else -1.0
+            elif np.isposinf(previous) and np.isfinite(current):
                 rate = 1.0
             elif not np.isfinite(previous) or not np.isfinite(current):
                 rate = 0.0
@@ -87,4 +92,4 @@ def improve_rate(
             temp_rate.append(rate)
         improve[0] = max(temp_rate) if temp_rate else 1.0
 
-    return improve
+    return _ImprovementWindow(improve, feasibility)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..utils._constraint_order import solution_key
 from ._utils import flex_get, solution_as_list
 
 
@@ -27,7 +28,7 @@ def update_fastga_plus(*args):
         parents = values[:population_size]
         offspring = values[population_size:]
         merged = [*offspring, *parents]
-        return sorted(merged, key=lambda item: float(item.fit))[:population_size], None
+        return sorted(merged, key=solution_key)[:population_size], None
     if mode == "parameter":
         return None, None
     if mode == "behavior":

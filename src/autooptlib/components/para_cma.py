@@ -6,18 +6,13 @@ from typing import Any
 
 import numpy as np
 
-from ._utils import flex_get
+from ._utils import extract_fits, flex_get
 from .search_cma import _regularize_covariance
 
 
 def _extract_fitness(obj: Any, mode: str) -> np.ndarray:
     if mode == "solution":
-        fits = flex_get(obj, "fits")
-        if callable(fits):
-            return np.asarray(fits()).reshape(-1)
-        if fits is not None:
-            return np.asarray(fits).reshape(-1)
-        raise ValueError("Solution must expose fits() for para_cma")
+        return extract_fits(obj)
     if mode == "algorithm":
         vals = flex_get(obj, "avePerformAll")
         if callable(vals):

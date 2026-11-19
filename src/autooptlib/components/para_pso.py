@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-import numpy as np
-
+from ..utils._constraint_order import solution_key
 from ..utils.solve import SolutionSet
-from ._utils import flex_get
 from .update_pairwise import update_pairwise
 
 
@@ -34,7 +32,5 @@ def para_pso(*args):
     # personal bests for particles that were not evaluated in that batch.
     aux["Pbest"] = SolutionSet(selected + list(pbest_set)[update_count:])
 
-    fitness = np.asarray([flex_get(sol, "fit") for sol in aux["Pbest"]], dtype=float)
-    best_idx = int(np.argmin(fitness))
-    aux["Gbest"] = aux["Pbest"][best_idx]
+    aux["Gbest"] = min(aux["Pbest"], key=solution_key)
     return aux

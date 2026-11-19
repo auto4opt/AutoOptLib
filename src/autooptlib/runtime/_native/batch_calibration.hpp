@@ -20,7 +20,9 @@ inline void bind_data_calibration(py::module_ &m,std::shared_ptr<NativeMath> mat
     auto table=measure([&](){auto rows=BatchStorage::read_rows(source);});
     // Retain original indexed owners and create an independent dense copy.
     auto descriptor=BatchStorage::read_rows(source);auto dense=std::make_shared<BatchStorage>(descriptor.materialize());
-    dense->evaluated=source->evaluated;dense->f=source->fitness();dense->valid=source->valid;
+    source->ensure_values();
+    dense->evaluated=source->evaluated;dense->f=source->f;dense->valid=source->valid;
+    dense->objectives=source->objectives;dense->constraints=source->constraints;
     Component<NativeMath> entry{name,math,solve.attr("SolutionSet"),np.attr("random").attr("Generator"),np.attr("random").attr("default_rng")};
     auto kernel=[&](bool indexed) {
       ComponentInvocation call;call.population=indexed?source:dense;call.problem=problem;call.parameter=parameter;

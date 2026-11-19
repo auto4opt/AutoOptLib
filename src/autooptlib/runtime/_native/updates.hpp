@@ -76,6 +76,8 @@ struct NativeUpdates {
       return py::none();
     py::array_t<double> fits(size);auto fitness=fits.mutable_data();py::ssize_t row=0;
     for (auto v : values) {
+      if (py::cast<double>(py::getattr(v, "con", py::float_(0.))) > 0.)
+        return py::none();  // The regular component handles constrained replacement.
       auto raw = v.attr("fit");
       if (!PyFloat_Check(raw.ptr()))
         return py::none();
@@ -267,9 +269,7 @@ struct NativeUpdates {
                 .attr("sorted")(
                     updated,
                     "key"_a =
-                        py::module_::import("operator")
-                            .attr("attrgetter")(
-                                "fit"))[py::slice(0, py::len(current), 1)];
+                        solve.attr("solution_key"))[py::slice(0, py::len(current), 1)];
       current = solution_type(updated);
       if (!boundary.is_none())
         boundary(origin, "generation-update-commit");

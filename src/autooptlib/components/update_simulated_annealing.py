@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from ..utils._constraint_order import solution_key
 from ._utils import ensure_rng, flex_get, solution_as_list
 
 
@@ -42,8 +43,12 @@ def update_simulated_annealing(*args):
         updated = list(old_list)
         for offspring_index, child in enumerate(new_list):
             idx = offspring_index % n
-            old_fit = float(updated[idx].fit)
-            new_fit = float(child.fit)
+            old_invalid, old_fit = solution_key(updated[idx])
+            new_invalid, new_fit = solution_key(child)
+            if old_invalid != new_invalid:
+                if old_invalid:
+                    updated[idx] = child
+                continue
             denom = (abs(old_fit) + 1e-6) * max(temperature, 1e-8)
             exponent = float(np.clip((old_fit - new_fit) / denom, -700.0, 700.0))
             if old_fit > new_fit or float(rng.random()) < float(np.exp(exponent)):

@@ -9,6 +9,7 @@ from typing import Any
 
 import numpy as np
 
+from ..utils._constraint_order import solution_key
 from .population import PopulationBatch
 
 POPULATION_EXECUTION_SEMANTICS = 'population_batch_v1'
@@ -139,7 +140,7 @@ class PopulationExecution:
                 break
             outputs.append((owner, pool))
         if interrupted:
-            best_rows = [min([*observed, *list(solutions)], key=lambda s: s.fit)] if observed else []
+            best_rows = [min([*observed, *list(solutions)], key=solution_key)] if observed else []
             return parent.to_solutions(), auxiliary, used, archives, best_rows, target
 
         # Restore route order before applying terminal update groups. Each sink
@@ -187,5 +188,5 @@ class PopulationExecution:
                                            data=data, archive=archive)
             archives[i] = result.statistics if name == 'archive_statistic' else result.population
         public = current.to_solutions()
-        best = min([*observed, *list(public)], key=lambda s: s.fit)
+        best = min([*observed, *list(public)], key=solution_key)
         return public, auxiliary, used, archives, [best], target

@@ -22,6 +22,20 @@ parts are violations, so feasible values are nonpositive. Return finite values.
 Every admitted objective evaluation counts toward `ProbFE`, including the
 initial population. Remaining partial batches respect this limit.
 
+AutoOptLib sums the positive parts and uses feasibility-first ordering across
+its execution backends. A feasible solution ranks ahead of an infeasible
+solution at any objective scale. The engine compares feasible solutions by
+objective value and infeasible solutions by total violation. The returned
+`Solution` keeps both values in `obj` and `con`. Its scalar `fit` reports the
+objective for a feasible solution and total violation for an infeasible
+solution. For a custom operator comparing candidates, use the pair
+`(solution.con > 0, solution.fit)` as the key, with smaller keys preferred.
+
+The quality metric reports the best feasible objective and uses infinity when
+the run has yet to find a feasible solution. An objective target is reached
+only by a feasible solution. Start a fresh run to use the new ordering with
+an experiment that was checkpointed under the fixed-penalty policy.
+
 `ProblemDefinition` supports richer construction, evaluation and repair hooks.
 A custom repair hook is part of the problem definition, separate from generic
 bound/type repair. For independent numerical batch objectives, see
